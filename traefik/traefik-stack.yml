@@ -45,7 +45,7 @@ services:
         - "traefik.http.routers.dashboard.rule=Host(`portainer.homehill.de`)"
         - "traefik.http.routers.dashboard.entrypoints=websecure"
         - "traefik.http.routers.dashboard.service=api@internal"
-        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8081"
         - "traefik.http.routers.dashboard.tls.certresolver=hetzner"
 
 networks:
