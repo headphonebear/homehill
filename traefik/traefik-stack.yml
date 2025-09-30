@@ -27,6 +27,7 @@ services:
       - "--certificatesresolvers.hetzner.acme.storage=/certs/acme.json"
       - "--certificatesresolvers.hetzner.acme.dnschallenge.delaybeforecheck=60"
       - "--api.dashboard=true"
+      - "--api.insecure=true"
       - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
       - "--providers.swarm.watch=true"
       - "--providers.swarm.exposedbydefault=false"
@@ -35,6 +36,7 @@ services:
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
     networks:
       - traefik_proxy
     deploy:
