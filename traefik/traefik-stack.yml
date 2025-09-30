@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.1
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/certs
+    environment:
+      - HETZNER_API_KEY=KNsM6Mmcl0pL0wOCDekAixssBbmLFQcl
+    command:
+      - "--certificatesresolvers.hetzner.acme.dnschallenge.provider=hetzner"
+      - "--certificatesresolvers.hetzner.acme.email=admin@homehill.de"
+      - "--certificatesresolvers.hetzner.acme.storage=/certs/acme.json"
+      - "--certificatesresolvers.hetzner.acme.dnschallenge.delaybeforecheck=60"
+      - "--api.dashboard=true"
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      - "--providers.swarm.watch=true"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.network=traefik_proxy"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+    networks:
+      - traefik_proxy
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.hostname != dovecote
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard.rule=Host(`portainer.homehill.de`)"
+        - "traefik.http.routers.dashboard.entrypoints=websecure"
+        - "traefik.http.routers.dashboard.service=api@internal"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+        - "traefik.http.routers.dashboard.tls.certresolver=hetzner"
+
+networks:
+  traefik_proxy:
+    driver: overlay
+    attachable: true
+
+volumes:
+  traefik_certs:
