@@ -48,7 +48,7 @@ services:
           - node.hostname != dovecote
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.dashboard.rule=Host(`traefik.homehill.de`)" # fixed
+        - "traefik.http.routers.dashboard.rule=Host(`traefik.homehill.de`)"
         - "traefik.http.routers.dashboard.entrypoints=websecure"
         - "traefik.http.routers.dashboard.service=api@internal"
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
