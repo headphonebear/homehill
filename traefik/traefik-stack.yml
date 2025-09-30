@@ -12,6 +12,10 @@ services:
         published: 443
         protocol: tcp
         mode: host
+      - target: 8080
+        published: 8081
+        protocol: tcp
+        mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/certs
@@ -45,7 +49,7 @@ services:
         - "traefik.http.routers.dashboard.rule=Host(`portainer.homehill.de`)"
         - "traefik.http.routers.dashboard.entrypoints=websecure"
         - "traefik.http.routers.dashboard.service=api@internal"
-        - "traefik.http.services.traefik.loadbalancer.server.port=8081"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
         - "traefik.http.routers.dashboard.tls.certresolver=hetzner"
 
 networks:
