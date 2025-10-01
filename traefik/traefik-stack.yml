@@ -19,6 +19,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/certs
+    configs: # <- NEU: Docker Config einbinden
+      - source: pihole_dynamic
+        target: /etc/traefik/dynamic/pihole.yml
     environment:
       - HETZNER_API_KEY=KNsM6Mmcl0pL0wOCDekAixssBbmLFQcl
     command:
@@ -32,6 +35,8 @@ services:
       - "--providers.swarm.watch=true"
       - "--providers.swarm.exposedbydefault=false"
       - "--providers.swarm.network=traefik_proxy"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
@@ -53,6 +58,10 @@ services:
         - "traefik.http.routers.dashboard.service=api@internal"
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
         - "traefik.http.routers.dashboard.tls.certresolver=hetzner"
+
+configs:
+  pihole_dynamic:
+    file: ./dynamic/pihole.yml
 
 networks:
   traefik_proxy:

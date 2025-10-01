@@ -1,0 +1,15 @@
+http:
+  routers:
+    pihole:
+      rule: "Host(`pihole.homehill.de`)"
+      entryPoints:
+        - websecure
+      service: pihole
+      tls:
+        certResolver: hetzner
+
+  services:
+    pihole:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.101:8080"
