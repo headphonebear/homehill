@@ -22,25 +22,29 @@ services:
     configs: # <- NEU: Docker Config einbinden
       - source: pihole_dynamic
         target: /etc/traefik/dynamic/pihole.yml
-    environment:
-      - HETZNER_API_KEY=KNsM6Mmcl0pL0wOCDekAixssBbmLFQcl
+    secrets:
+      - hetzner_api_key
+    entrypoint: [ "/bin/sh", "-c" ]
     command:
-      - "--certificatesresolvers.hetzner.acme.dnschallenge.provider=hetzner"
-      - "--certificatesresolvers.hetzner.acme.email=admin@homehill.de"
-      - "--certificatesresolvers.hetzner.acme.storage=/certs/acme.json"
-      - "--certificatesresolvers.hetzner.acme.dnschallenge.delaybeforecheck=60"
-      - "--api.dashboard=true"
-      - "--api.insecure=true"
-      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
-      - "--providers.swarm.watch=true"
-      - "--providers.swarm.exposedbydefault=false"
-      - "--providers.swarm.network=traefik_proxy"
-      - "--providers.file.directory=/etc/traefik/dynamic"
-      - "--providers.file.watch=true"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - |
+        export HETZNER_API_KEY=$$(cat /run/secrets/hetzner_api_key)
+        exec /entrypoint.sh traefik \
+          --certificatesresolvers.hetzner.acme.dnschallenge.provider=hetzner \
+          --certificatesresolvers.hetzner.acme.email=admin@homehill.de \
+          --certificatesresolvers.hetzner.acme.storage=/certs/acme.json \
+          --certificatesresolvers.hetzner.acme.dnschallenge.delaybeforecheck=60 \
+          --api.dashboard=true \
+          --api.insecure=true \
+          --providers.swarm.endpoint=unix:///var/run/docker.sock \
+          --providers.swarm.watch=true \
+          --providers.swarm.exposedbydefault=false \
+          --providers.swarm.network=traefik_proxy \
+          --providers.file.directory=/etc/traefik/dynamic \
+          --providers.file.watch=true \
+          --entrypoints.web.address=:80 \
+          --entrypoints.websecure.address=:443 \
+          --entrypoints.web.http.redirections.entrypoint.to=websecure \
+          --entrypoints.web.http.redirections.entrypoint.scheme=https
 
     networks:
       - traefik_proxy
@@ -70,3 +74,7 @@ networks:
 
 volumes:
   traefik_certs:
+
+secrets:
+  hetzner_api_key:
+    external: true
