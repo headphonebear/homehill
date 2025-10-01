@@ -13,6 +13,10 @@ services:
         published: 53
         protocol: udp
         mode: host
+      - target: 80
+        published: 8080
+        protocol: tcp
+       # mode: host
     environment:
       - TZ=Europe/Berlin
       - WEBPASSWORD=homehill # docker exec containername pihole setpassword 'homehill'
