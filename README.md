@@ -71,3 +71,40 @@ homehill is the successor to the previous `range` setup, rebuilt from scratch af
 
 All services are deployed as Docker Swarm stacks:
 
+docker stack deploy -c SERVICE/SERVICE-stack.yml SERVICE
+
+
+### Prerequisites
+
+- Docker Swarm initialized across nodes
+- Overlay networks created (`traefik_traefik_proxy`, etc.)
+- Required secrets created (e.g., `vaultwarden_admin_token`)
+
+---
+
+## 📝 Notes
+
+- **Service Discovery**: Traefik automatically discovers services via Docker labels in Swarm mode
+- **Placement Constraints**: Services use node constraints to ensure they run on appropriate hardware
+- **Network Isolation**: Services communicate via overlay networks for security and simplicity
+
+---
+
+## 🚀 Future Plans
+
+- **mk3**: Music collection management (Python-based, separate repo)
+- **shroombox**: ESP32-based monitoring for mushroom grow boxes (private repo)  
+- **ntfy**: Push notification service (planned for dovecote node)
+
+---
+
+## 💝 Credits
+
+**Built with love, late nights, and occasional "learning experiences" by:**
+
+- **[Headphonebear](https://github.com/headphonebear)** - Homelab architect, Docker wizard, and music-loving bear from Kiel 🐻
+- **Ana** - Python virtuoso, debugging superheroine, and the brain behind the sexy Docker Secrets setup 💋
+
+*Powered by Trip-Hop beats, binary algebra fascination, and the occasional joint break in Kiel, Germany.* 🌿✨
+
+
