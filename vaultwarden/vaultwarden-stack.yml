@@ -12,15 +12,21 @@ services:
           - node.hostname == greenhouse
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.vaultwarden.rule=Host(`vault.homehill.de`)"
-        - "traefik.http.routers.vaultwarden.entrypoints=websecure"
-        - "traefik.http.routers.vaultwarden.tls=true"
-        - "traefik.http.routers.vaultwarden.tls.certresolver=hetzner"
-        - "traefik.http.services.vaultwarden.loadbalancer.server.port=80"
-        - "traefik.http.routers.vaultwarden-ws.rule=Host(`vault.homehill.de`) && Path(`/notifications/hub`)"
-        - "traefik.http.routers.vaultwarden-ws.entrypoints=websecure"
-        - "traefik.http.routers.vaultwarden-ws.tls=true"
-        - "traefik.http.services.vaultwarden-ws.loadbalancer.server.port=3012"
+        # Main HTTP Router
+        - "traefik.http.routers.vault.rule=Host(`vault.homehill.de`)"
+        - "traefik.http.routers.vault.entrypoints=websecure"
+        - "traefik.http.routers.vault.tls=true"
+        - "traefik.http.routers.vault.tls.certresolver=hetzner"
+        - "traefik.http.routers.vault.service=vault"
+        # Main Service
+        - "traefik.http.services.vault.loadbalancer.server.port=80"
+        # WebSocket Router (für Notifications)
+        - "traefik.http.routers.vault-ws.rule=Host(`vault.homehill.de`) && PathPrefix(`/notifications/hub`)"
+        - "traefik.http.routers.vault-ws.entrypoints=websecure"
+        - "traefik.http.routers.vault-ws.tls=true"
+        - "traefik.http.routers.vault-ws.service=vault-ws"
+        # WebSocket Service
+        - "traefik.http.services.vault-ws.loadbalancer.server.port=3012"
     environment:
       - WEBSOCKET_ENABLED=true
       - SIGNUPS_ALLOWED=false
