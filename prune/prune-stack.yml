@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   prune:
-    image: alpine
-    command: sh -c "while true; do docker container prune -f --filter 'until=60m'; sleep 3600; done"
+    image: headphonebear/prune-image:latest
+    build: ./prune/
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
