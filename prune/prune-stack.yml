@@ -1,7 +1,6 @@
 services:
   prune:
     image: headphonebear/prune-image:latest
-    build: ./prune/
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
