@@ -82,6 +82,22 @@ docker stack deploy -c SERVICE/SERVICE-stack.yml SERVICE
 
 ---
 
+## 🛠️ Development Workflow
+
+### Branching Strategy
+- **Main branch**: Stable, deployable homelab configuration
+- **Feature branches**: New services or major changes (e.g., `feature/ntfy-service`)
+- **Hotfix branches**: Emergency fixes (e.g., `hotfix/vaultwarden-config`)
+
+### Workflow
+1. Create feature branch from main
+2. Develop & test locally
+3. Deploy to homelab for integration testing
+4. Merge back to main when stable
+5. Clean up feature branch
+
+---
+
 ## 📝 Notes
 
 - **Service Discovery**: Traefik automatically discovers services via Docker labels in Swarm mode
