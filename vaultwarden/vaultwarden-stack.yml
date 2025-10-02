@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   vaultwarden:
-    image: vaultwarden/server:latest
+    image: headphonebear/vaultwarden-custom:latest
     deploy:
       mode: replicated
       replicas: 1
@@ -13,10 +13,9 @@ services:
     environment:
       - WEBSOCKET_ENABLED=true
       - SIGNUPS_ALLOWED=false
-      - ADMIN_TOKEN=dein_sicheres_token  # openssl rand -base64 48
       - DOMAIN=https://vault.homehill.de
     volumes:
-      - vault_data:/data  # Persistent Storage hier!
+      - vault_data:/data
     networks:
       - proxy
     labels:
@@ -30,6 +29,8 @@ services:
       - "traefik.http.routers.vaultwarden-ws.entrypoints=websecure"
       - "traefik.http.routers.vaultwarden-ws.tls=true"
       - "traefik.http.services.vaultwarden-ws.loadbalancer.server.port=3012"
+    secrets:
+      - vaultwarden_admin_token
 
 networks:
   proxy:
@@ -37,3 +38,7 @@ networks:
 
 volumes:
   vault_data:
+
+secrets:
+  vaultwarden_admin_token:
+    external: true
