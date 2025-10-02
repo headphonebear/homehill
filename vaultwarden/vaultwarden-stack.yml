@@ -10,6 +10,17 @@ services:
         constraints:
           - node.role == manager
           - node.hostname == greenhouse
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.vaultwarden.rule=Host(`vault.homehill.de`)"
+        - "traefik.http.routers.vaultwarden.entrypoints=websecure"
+        - "traefik.http.routers.vaultwarden.tls=true"
+        - "traefik.http.routers.vaultwarden.tls.certresolver=hetzner"
+        - "traefik.http.services.vaultwarden.loadbalancer.server.port=80"
+        - "traefik.http.routers.vaultwarden-ws.rule=Host(`vault.homehill.de`) && Path(`/notifications/hub`)"
+        - "traefik.http.routers.vaultwarden-ws.entrypoints=websecure"
+        - "traefik.http.routers.vaultwarden-ws.tls=true"
+        - "traefik.http.services.vaultwarden-ws.loadbalancer.server.port=3012"
     environment:
       - WEBSOCKET_ENABLED=true
       - SIGNUPS_ALLOWED=false
@@ -18,17 +29,6 @@ services:
       - vault_data:/data
     networks:
       - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.vaultwarden.rule=Host(`vault.homehill.de`)"
-      - "traefik.http.routers.vaultwarden.entrypoints=websecure"
-      - "traefik.http.routers.vaultwarden.tls=true"
-      - "traefik.http.routers.vaultwarden.tls.certresolver=hetzner"
-      - "traefik.http.services.vaultwarden.loadbalancer.server.port=80"
-      - "traefik.http.routers.vaultwarden-ws.rule=Host(`vault.homehill.de`) && Path(`/notifications/hub`)"
-      - "traefik.http.routers.vaultwarden-ws.entrypoints=websecure"
-      - "traefik.http.routers.vaultwarden-ws.tls=true"
-      - "traefik.http.services.vaultwarden-ws.loadbalancer.server.port=3012"
     secrets:
       - vaultwarden_admin_token
 
