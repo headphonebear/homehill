@@ -3,6 +3,7 @@ version: '3.8'
 services:
   ntfy:
     image: binwiederhier/ntfy:latest
+    command: ["serve"]  # DAS war's!
     deploy:
       mode: replicated
       replicas: 1
@@ -17,7 +18,7 @@ services:
         - "traefik.http.routers.ntfy.tls.certresolver=hetzner"
         - "traefik.http.services.ntfy.loadbalancer.server.port=80"
     volumes:
-      - ntfy_data:/var/lib/ntfy  # Nur Data, keine Config
+      - ntfy_data:/var/lib/ntfy
     networks:
       - traefik_traefik_proxy
     environment:
