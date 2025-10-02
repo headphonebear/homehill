@@ -44,6 +44,14 @@ homehill is the successor to the previous `range` setup, rebuilt from scratch af
 - Provides DNS resolution for `*.homehill.de` domains
 - Web interface at `pihole.homehill.de`
 
+### Notifications
+
+**[ntfy](ntfy/)**: Simple pub-sub notification service
+- Runs on dovecote node for lightweight message delivery
+- Web interface and API at `ntfy.homehill.de`
+- Supports push notifications, webhooks, and real-time subscriptions
+- Perfect for homelab monitoring and alerts
+
 ### Data & Storage
 
 **[PostgreSQL](postgres/)**: Shared database service for applications
