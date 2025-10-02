@@ -28,15 +28,12 @@ services:
     volumes:
       - vault_data:/data
     networks:
-      - traefik_proxy  # Füge das hinzu – Traefik's Netzwerk für Discovery und Routing!
-      - proxy  # Behalt's, falls du's für andere Sachen brauchst
+      - traefik_traefik_proxy
     secrets:
       - vaultwarden_admin_token
 
 networks:
-  traefik_proxy:  # Mach's external, falls nicht schon
-    external: true
-  proxy:
+  traefik_traefik_proxy:
     external: true
 
 volumes:
