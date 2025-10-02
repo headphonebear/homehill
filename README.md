@@ -10,8 +10,9 @@ homehill is the successor to the previous `range` setup, rebuilt from scratch af
 
 ### Nodes
 - **greenhouse** (Manager): Primary Swarm manager node, hosts most services
-- **nook** (Worker): Secondary worker node  
-- **dovecote** (Worker): Minimal worker node, intended primarily for ntfy notifications
+- **nook** (Manager): Secondary manager node  
+- **dovecote** (Worker): Minimal manager node, intended primarily for ntfy notifications
+- All three manager because of quorum
 
 ### Core Network
 - **traefik_traefik_proxy**: Main overlay network for all web-facing services
