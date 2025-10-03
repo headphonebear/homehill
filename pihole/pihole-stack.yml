@@ -13,10 +13,6 @@ services:
         published: 53
         protocol: udp
         mode: host
-      - target: 80
-        published: 8080
-        protocol: tcp
-        mode: host
     environment:
       - TZ=Europe/Berlin
       - WEBPASSWORD=homehill # docker exec containername pihole setpassword 'homehill'
@@ -27,6 +23,7 @@ services:
       - pihole_etc:/etc/pihole
       - pihole_dnsmasq:/etc/dnsmasq.d
     networks:
+      - traefik_traefik_proxy
       - pihole_network
     deploy:
       mode: replicated
@@ -44,6 +41,8 @@ services:
         - "traefik.http.services.pihole.loadbalancer.server.port=80"
 
 networks:
+  traefik_traefik_proxy:
+    external: true
   pihole_network:
     driver: overlay
     attachable: true
