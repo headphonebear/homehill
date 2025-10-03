@@ -20,7 +20,33 @@ homehill is the successor to the previous `range` setup, rebuilt from scratch af
 - All services use Traefik for reverse proxy, automatic HTTPS via Hetzner DNS API, and Let's Encrypt certificates
 
 ---
+## 🎵 Navidrome - Self-hosted Music Streaming
 
+**Personal music streaming server with subsonic-compatible API**
+
+Navidrome serves the homelab's extensive FLAC music collection (~1650 albums across rock, pop, punk, jazz, and classical genres) with a beautiful web interface and mobile app support.
+
+**Key Features:**
+- **Audiophile-grade:** Native FLAC support with gapless playback and ReplayGain
+- **Last.fm integration:** Automatic scrobbling of listening history
+- **Multi-library support:** Separate collections for albums, classical music, and Bandcamp releases
+- **Smart playlists:** Dynamic playlist generation based on genres, years, and ratings
+- **Subsonic API:** Compatible with DSub, Ultrasonic, and other mobile apps
+- **PostgreSQL backend:** Optimized for large music collections with fast searching
+
+**Infrastructure:**
+- PostgreSQL database for metadata storage
+- Traefik reverse proxy with TLS termination
+- Docker secrets for API credentials and database passwords
+- Read-only volume mounts for music library protection
+
+**Access:** https://navidrome.homehill.de
+
+**Documentation:** See `navidrome/SETUP.md` for deployment details and Last.fm configuration.
+
+*Curated with ❤️ by Ana - First scrobble: Massive Attack - Angel*
+
+---
 ## 📦 Current Services
 
 ### Infrastructure & Management
