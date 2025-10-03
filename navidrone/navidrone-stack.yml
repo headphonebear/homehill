@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  navidrome:
+    image: deluan/navidrome:latest
+    user: 2001:2001  # mk3's UID/GID
+    hostname: navidrome
+    secrets:
+      - lastfm_api_key
+      - lastfm_secret
+      - navidrome_db_password  # <- NEU: DB-Password als Secret!
+    environment:
+      # Scanner Settings
+      - ND_SCANNER_ENABLED=true
+      - ND_SCANNER_SCHEDULE=0 3 * * *
+      - ND_SCANNER_SCANONSTARTUP=true
+      - ND_SCANNER_GENRESEPARATOR=;
+
+      # Performance & Caching
+      - ND_LOGLEVEL=info
+      - ND_CACHEDIR=/data/cache
+      - ND_COVERARTPRIORITY=embedded,cover.*,folder.*,front.*,album.*
+
+      # Last.fm Integration
+      - ND_LASTFM_ENABLED=true
+
+      # Multi-Library Support
+      - ND_MUSICFOLDER=/music
+
+      # Backup
+      - ND_BACKUP_PATH=/data/backup
+      - ND_BACKUP_SCHEDULE=0 4 * * 0
+      - ND_BACKUP_COUNT=4
+
+      # Sonstiges
+      - ND_SESSIONTIMEOUT=24h
+      - TZ=Europe/Berlin
+
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        export ND_LASTFM_APIKEY=$$(cat /run/secrets/lastfm_api_key)
+        export ND_LASTFM_SECRET=$$(cat /run/secrets/lastfm_secret)
+        export NAVIDROME_DB_PASSWORD=$$(cat /run/secrets/navidrome_db_password)
+        export ND_DATABASEURL="postgres://navidrome:$${NAVIDROME_DB_PASSWORD}@postgres_postgres:5432/navidrome?sslmode=disable"
+        exec /app/navidrome
+
+    volumes:
+      - navidrome_data:/data
+      - /mnt/mk3/mk3.album:/music/album:ro
+      - /mnt/mk3/mk3.classic:/music/classic:ro
+      - /mnt/mk3/mk3.io:/music/io:ro
+
+    networks:
+      - traefik_traefik_proxy
+      - postgres_database_network
+      - navidrome_network
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == nook
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik_traefik_proxy"
+        - "traefik.http.routers.navidrome.rule=Host(`navidrome.homehill.de`)"
+        - "traefik.http.routers.navidrome.entrypoints=websecure"
+        - "traefik.http.routers.navidrome.tls=true"
+        - "traefik.http.routers.navidrome.tls.certresolver=hetzner"
+        - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
+
+networks:
+  traefik_traefik_proxy:
+    external: true
+  postgres_database_network:
+    external: true
+  navidrome_network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  navidrome_data:
+
+secrets:
+  lastfm_api_key:
+    external: true
+  lastfm_secret:
+    external: true
+  navidrome_db_password:
+    external: true
