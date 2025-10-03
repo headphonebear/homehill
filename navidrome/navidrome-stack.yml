@@ -1,6 +1,21 @@
 version: '3.8'
 
 services:
+  navidrome-init:
+    image: alpine:latest
+    user: root
+    command: |
+      sh -c "
+        mkdir -p /data/cache /data/backup
+        chown -R 2001:2001 /data
+        chmod -R 755 /data
+      "
+    volumes:
+      - navidrome_data:/data
+    deploy:
+      restart_policy:
+        condition: none
+
   navidrome:
     image: deluan/navidrome:latest
     user: 2001:2001  # mk3's UID/GID
