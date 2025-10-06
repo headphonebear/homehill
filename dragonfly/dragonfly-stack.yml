@@ -13,7 +13,7 @@ services:
         protocol: tcp
         mode: host
     volumes:
-      - dragonfly_master_data:/data
+      - master_data:/data
     command:
       - "--port=6379"
       - "--snapshot_cron=0 */6 * * *"  # Snapshot every 6 hours
@@ -25,7 +25,7 @@ services:
       - "--admin_port=6380"
       - "--vmodule=*=1"  # Verbose logging level
     networks:
-      - dragonfly_cluster
+      - cluster
       - traefik_proxy
     deploy:
       mode: replicated
@@ -58,7 +58,7 @@ services:
         protocol: tcp
         mode: host
     volumes:
-      - dragonfly_replica_data:/data
+      - replica_data:/data
     command:
       - "--port=6379"
       - "--replicaof=dragonfly-master:6379"
@@ -71,7 +71,7 @@ services:
       - "--admin_port=6380"
       - "--vmodule=*=1"
     networks:
-      - dragonfly_cluster
+      - cluster
       - traefik_proxy
     depends_on:
       - dragonfly-master
@@ -95,15 +95,15 @@ services:
         - "traefik.http.services.dragonfly-replica.loadbalancer.server.port=6380"
 
 networks:
-  dragonfly_cluster:
+  cluster:
     driver: overlay
     attachable: true
   traefik_proxy:
     external: true
-    name: traefik_traefik_proxy
+    name: traefik_traefik_proxy  # CORRECT network name from your setup!
 
 volumes:
-  dragonfly_master_data:
+  master_data:
     driver: local
-  dragonfly_replica_data:
+  replica_data:
     driver: local
