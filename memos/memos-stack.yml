@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  memos:
+    image: ghcr.io/usememos/memos:latest
+    secrets:
+      - memos_db_password
+    environment:
+      MEMOS_DRIVER: postgres
+      MEMOS_DSN: "postgresql://memos_user:$$(cat /run/secrets/memos_db_password)@postgres:5432/memos?sslmode=disable"
+    volumes:
+      - type: volume
+        source: memos-data
+        target: /var/opt/memos
+        volume:
+          nocopy: true
+    networks:
+      - traefik_traefik_proxy
+      - postgres_database_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.hostname == greenhouse]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.memos.rule=Host(`memos.homehill.de`)"
+        - "traefik.http.routers.memos.entrypoints=websecure"
+        - "traefik.http.routers.memos.tls.certresolver=hetzner"
+        - "traefik.http.services.memos.loadbalancer.server.port=5230"
+
+secrets:
+  memos_db_password:
+    external: true
+
+volumes:
+  memos-data:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=forest,nolock,soft,rw,nfsvers=4"
+      device: ":/memos"
+
+networks:
+  traefik_traefik_proxy:
+    external: true
+  postgres_database_network:
+    external: true
