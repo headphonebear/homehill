@@ -21,8 +21,9 @@ services:
       - "--dir=/data"
       - "--bind=0.0.0.0"
       - "--maxmemory=8gb"  # Adjust based on nook's 16GB RAM
-      - "--http_admin_console=true"
-      - "--admin_port=6380"
+      - "--admin_port=6380"  # Dedicated admin port
+      - "--admin_nopass=true"  # No auth required for admin interface
+      - "--primary_port_http_enabled=true"  # HTTP on main port (default)
       - "--vmodule=*=1"  # Verbose logging level
     networks:
       - cluster
@@ -39,7 +40,7 @@ services:
         max_attempts: 3
       labels:
         - "traefik.enable=true"
-        # Admin Web Interface
+        # Admin Web Interface on dedicated port
         - "traefik.http.routers.dragonfly-admin.rule=Host(`dragonfly.homehill.de`)"
         - "traefik.http.routers.dragonfly-admin.entrypoints=websecure"
         - "traefik.http.routers.dragonfly-admin.service=dragonfly-admin"
@@ -67,8 +68,9 @@ services:
       - "--dir=/data"
       - "--bind=0.0.0.0"
       - "--maxmemory=4gb"  # Adjust based on greenhouse's 8GB RAM
-      - "--http_admin_console=true"
-      - "--admin_port=6380"
+      - "--admin_port=6380"  # Dedicated admin port
+      - "--admin_nopass=true"  # No auth required for admin interface
+      - "--primary_port_http_enabled=true"  # HTTP on main port (default)
       - "--vmodule=*=1"
     networks:
       - cluster
