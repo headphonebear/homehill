@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  dragonfly-master:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: host
+      - target: 6380
+        published: 6380
+        protocol: tcp
+        mode: host
+    volumes:
+      - dragonfly_master_data:/data
+    command:
+      - "--port=6379"
+      - "--snapshot_cron=0 */6 * * *"  # Snapshot every 6 hours
+      - "--dbfilename=dump.rdb"
+      - "--dir=/data"
+      - "--bind=0.0.0.0"
+      - "--maxmemory=8gb"  # Adjust based on nook's 16GB RAM
+      - "--http_admin_console=true"
+      - "--admin_port=6380"
+      - "--vmodule=*=1"  # Verbose logging level
+    networks:
+      - dragonfly_cluster
+      - traefik_proxy
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == nook  # Heavy lifter with 16GB RAM
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        # Admin Web Interface
+        - "traefik.http.routers.dragonfly-admin.rule=Host(`dragonfly.homehill.de`)"
+        - "traefik.http.routers.dragonfly-admin.entrypoints=websecure"
+        - "traefik.http.routers.dragonfly-admin.service=dragonfly-admin"
+        - "traefik.http.routers.dragonfly-admin.tls.certresolver=hetzner"
+        - "traefik.http.services.dragonfly-admin.loadbalancer.server.port=6380"
+
+  dragonfly-replica:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    ports:
+      - target: 6379
+        published: 6381
+        protocol: tcp
+        mode: host
+      - target: 6380  
+        published: 6382
+        protocol: tcp
+        mode: host
+    volumes:
+      - dragonfly_replica_data:/data
+    command:
+      - "--port=6379"
+      - "--replicaof=dragonfly-master:6379"
+      - "--snapshot_cron=0 */12 * * *"  # Less frequent snapshots for replica
+      - "--dbfilename=dump_replica.rdb"
+      - "--dir=/data"
+      - "--bind=0.0.0.0"
+      - "--maxmemory=4gb"  # Adjust based on greenhouse's 8GB RAM
+      - "--http_admin_console=true"
+      - "--admin_port=6380"
+      - "--vmodule=*=1"
+    networks:
+      - dragonfly_cluster
+      - traefik_proxy  
+    depends_on:
+      - dragonfly-master
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == greenhouse  # Docker workhorse with 8GB RAM
+      restart_policy:
+        condition: on-failure
+        delay: 10s  # Slightly longer delay for replica
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        # Replica Admin Interface
+        - "traefik.http.routers.dragonfly-replica.rule=Host(`dragonfly-replica.homehill.de`)"
+        - "traefik.http.routers.dragonfly-replica.entrypoints=websecure"
+        - "traefik.http.routers.dragonfly-replica.service=dragonfly-replica"
+        - "traefik.http.routers.dragonfly-replica.tls.certresolver=hetzner"
+        - "traefik.http.services.dragonfly-replica.loadbalancer.server.port=6380"
+
+networks:
+  dragonfly_cluster:
+    driver: overlay
+    attachable: true
+  traefik_proxy:
+    external: true
+    name: traefik_traefik_proxy
+
+volumes:
+  dragonfly_master_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/docker/volumes/dragonfly_master
+  dragonfly_replica_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/docker/volumes/dragonfly_replica
