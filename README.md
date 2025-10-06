@@ -1,8 +1,10 @@
 # 🏔️ homehill
 
-**A Docker Swarm-based homelab infrastructure running across multiple Raspberry Pi nodes.**
+**A Docker Swarm-based homelab infrastructure running across multiple N150 and Wyse nodes.**
 
 homehill is the successor to the previous `range` setup, rebuilt from scratch after a late-night Docker Swarm "learning experience" 😅. This repository contains all service stacks, configurations, and documentation for a multi-node homelab environment focused on privacy, security, and self-hosting.
+
+This is the repository I use in my Docker Swarm/Portainer setup as described. Feel free to use it as a blueprint, but better not a manual only. You need to understand what you're doing.   
 
 ---
 
