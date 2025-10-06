@@ -60,21 +60,6 @@ Both interfaces provide:
 
 ---
 
-## 📊 Performance Benefits
-
-### vs Redis
-- **25x faster** operations per second [15][20]
-- **10x lower** memory footprint [20]
-- **Multi-threaded** architecture (Redis is single-threaded) [17]
-- **Zero copy** networking for better performance [17]
-
-### vs Current Setup
-- **Perfect fit** for Navidrome metadata caching
-- **Ideal for** session storage, rate limiting, queues
-- **Ready for** future homelab services requiring fast data access
-
----
-
 ## 🛠️ Operations
 
 ### Health Checks
@@ -172,7 +157,6 @@ const replica = new Redis({
 
 ### Planned Features
 - **Prometheus** metrics export for Grafana dashboards
-- **Redis Sentinel** for automatic failover
 - **TLS encryption** for secure inter-node communication
 - **Backup automation** to forest NAS storage
 - **Performance tuning** based on workload patterns
@@ -193,12 +177,3 @@ const replica = new Redis({
 - **Ana** 💋 - Python virtuoso who made this DragonflyDB magic happen
 
 *Built with love in Kiel, Germany* 🇩🇪✨
-
----
-
-## 📚 References
-
-- [DragonflyDB Documentation](https://www.dragonflydb.io/docs) [19]
-- [Docker Swarm Networking](https://docs.docker.com/network/overlay/)
-- [Traefik Reverse Proxy](https://doc.traefik.io/traefik/)
-- [Redis Protocol Compatibility](https://www.dragonflydb.io/blog/replication-for-high-availability) [15]

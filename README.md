@@ -84,6 +84,15 @@ Navidrome serves the homelab's extensive FLAC music collection (~1650 albums acr
 - Runs on dedicated `database_network`
 - Persistent storage via Docker volumes
 
+### Caching & Storage
+
+**[DragonflyDB](dragonfly/)**: Lightning-fast Redis-compatible in-memory datastore with master-replica replication
+- **25x faster** than Redis with multi-threaded architecture and superior memory efficiency
+- **High availability** setup across nook (master, 8GB) and greenhouse (replica, 4GB) nodes
+- **Automatic snapshots** every 6/12 hours with persistent Docker volumes for data durability
+- **Web interfaces** at `dragonfly.homehill.de` and `dragonfly-replica.homehill.de` for real-time monitoring and metrics
+- **Production ready** for session storage, caching, queues, and fast data access across all homelab services
+
 ### Security
 
 **[Vaultwarden](vaultwarden/)**: Self-hosted Bitwarden-compatible password manager
