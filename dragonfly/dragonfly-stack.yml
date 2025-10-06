@@ -17,7 +17,7 @@ services:
     command:
       - "--port=6379"
       - "--snapshot_cron=0 */6 * * *"  # Snapshot every 6 hours
-      - "--dbfilename=dump.rdb"
+      - "--dbfilename=dump"  # NO .rdb extension for DF format!
       - "--dir=/data"
       - "--bind=0.0.0.0"
       - "--maxmemory=8gb"  # Adjust based on nook's 16GB RAM
@@ -64,7 +64,7 @@ services:
       - "--port=6379"
       - "--replicaof=dragonfly-master:6379"
       - "--snapshot_cron=0 */12 * * *"  # Less frequent snapshots for replica
-      - "--dbfilename=dump_replica.rdb"
+      - "--dbfilename=dump_replica"  # NO .rdb extension for DF format!
       - "--dir=/data"
       - "--bind=0.0.0.0"
       - "--maxmemory=4gb"  # Adjust based on greenhouse's 8GB RAM
