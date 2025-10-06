@@ -40,6 +40,7 @@ services:
         max_attempts: 3
       labels:
         - "traefik.enable=true"
+        - "traefik.docker.network=traefik_traefik_proxy" # CRITICAL: Tell Traefik which network to use!
         # Admin Web Interface on dedicated port
         - "traefik.http.routers.dragonfly-admin.rule=Host(`dragonfly.homehill.de`)"
         - "traefik.http.routers.dragonfly-admin.entrypoints=websecure"
@@ -89,6 +90,7 @@ services:
         max_attempts: 3
       labels:
         - "traefik.enable=true"
+        - "traefik.docker.network=traefik_traefik_proxy" # CRITICAL: Tell Traefik which network to use!
         # Replica Admin Interface
         - "traefik.http.routers.dragonfly-replica.rule=Host(`dragonfly-replica.homehill.de`)"
         - "traefik.http.routers.dragonfly-replica.entrypoints=websecure"
