@@ -53,7 +53,7 @@ services:
         published: 6381
         protocol: tcp
         mode: host
-      - target: 6380  
+      - target: 6380
         published: 6382
         protocol: tcp
         mode: host
@@ -72,7 +72,7 @@ services:
       - "--vmodule=*=1"
     networks:
       - dragonfly_cluster
-      - traefik_proxy  
+      - traefik_proxy
     depends_on:
       - dragonfly-master
     deploy:
@@ -105,13 +105,5 @@ networks:
 volumes:
   dragonfly_master_data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/lib/docker/volumes/dragonfly_master
   dragonfly_replica_data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/lib/docker/volumes/dragonfly_replica
