@@ -12,6 +12,10 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2025.10.07]
+### Change
+- **hostnames** Project will from now on use FQHN only. Old hostnames will be changed when touched.
+
 ## [2025.10.06] - "The Dragon Awakens" 🐉
 ### Added
 - **DragonflyDB cluster** with master-replica replication setup
