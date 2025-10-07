@@ -34,7 +34,7 @@ volumes:
     driver: local
     driver_opts:
       type: "nfs"
-      o: "addr=forest.homehill.de,nolock,soft,rw,nfsvers=4"
+      o: "addr=forest.homehill.de,nolock,soft,rw,nfsvers=3"
       device: ":/nfs/memos/memos-svc" # path bc WD MyCloud NFS permission mapping
 
 networks:
