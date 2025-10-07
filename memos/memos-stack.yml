@@ -14,7 +14,7 @@ services:
         echo "=== Starting with explicit flags ==="
         ./memos \
           --driver postgres \
-          --dsn "postgresql://homehill:$${MEMOS_PASSWORD}@postgres:5432/memos?sslmode=disable" \
+          --dsn "postgresql://homehill:$${MEMOS_PASSWORD}@postgres_postgres:5432/memos?sslmode=disable" \
           --port 5230 \
           --mode prod \
           --data /var/opt/memos
