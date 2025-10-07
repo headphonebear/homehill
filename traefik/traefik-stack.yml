@@ -50,11 +50,10 @@ services:
       - traefik_proxy
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       placement:
         constraints:
-          - node.role == manager
-          - node.hostname != dovecote
+          - node.hostname = nook
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.dashboard.rule=Host(`traefik.homehill.de`)"
