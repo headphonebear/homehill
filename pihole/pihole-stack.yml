@@ -5,6 +5,10 @@ services:
     image: pihole/pihole:latest
     hostname: pihole
     ports:
+      - target: 80
+        published: 8080
+        protocol: tcp
+        mode: host
       - target: 53
         published: 53
         protocol: tcp
