@@ -6,16 +6,14 @@ services:
     user: "7001:7001"
     secrets:
       - memos_db_password
-    environment:
-      MEMOS_DRIVER: postgres
-      # NO MEMOS_DSN_FILE here!
-    entrypoint: [ "/bin/sh", "-c" ]
+    entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         export MEMOS_PASSWORD=$$(cat /run/secrets/memos_db_password)
+        export MEMOS_DRIVER=postgres
         export MEMOS_DSN="postgresql://homehill:$${MEMOS_PASSWORD}@postgres.homehill.de:5432/memos?sslmode=disable"
-        exec memos  # <- WITHOUT path, just "memos"
-
+        # Lass Docker das Original-Entrypoint finden:
+        exec $$(which memos) || exec ./memos || exec /app/memos
     volumes:
       - type: volume
         source: memos-data
