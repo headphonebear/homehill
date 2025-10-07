@@ -8,7 +8,14 @@ services:
       - memos_db_password
     environment:
       MEMOS_DRIVER: postgres
-      MEMOS_DSN_FILE: /run/secrets/memos_db_password
+      # NO MEMOS_DSN_FILE here!
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        export MEMOS_PASSWORD=$$(cat /run/secrets/memos_db_password)
+        export MEMOS_DSN="postgresql://homehill:$${MEMOS_PASSWORD}@postgres.homehill.de:5432/memos?sslmode=disable"
+        exec memos  # <- WITHOUT path, just "memos"
+
     volumes:
       - type: volume
         source: memos-data
