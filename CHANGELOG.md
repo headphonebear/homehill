@@ -7,14 +7,20 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ## [Unreleased]
 ### Planned
-- Memo 
+- Memo stack
 - Prometheus/Grafana monitoring stack
 
 ---
 
 ## [2025.10.07]
 ### Change
-- **hostnames** Project will from now on use FQHN only. Old hostnames will be changed when touched.
+- **hostnames** Project will from now on use FQHN. Old use of hostnames will be  
+changed when touched (but will not just be touched to be changed).
+- **serviceaccounts** Project will from now on use service accounts (for docker  
+and container use only) instead of real person's account (coder, mk3). Service  
+accounts will cluster wide use UIDs from 9000 to 9999. 
+
+---
 
 ## [2025.10.06] - "The Dragon Awakens" 🐉
 ### Added

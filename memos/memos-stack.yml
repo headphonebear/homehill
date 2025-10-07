@@ -7,7 +7,7 @@ services:
       - memos_db_password
     environment:
       MEMOS_DRIVER: postgres
-      MEMOS_DSN: "postgresql://memos_user:$$(cat /run/secrets/memos_db_password)@postgres:5432/memos?sslmode=disable"
+      MEMOS_DSN: "postgresql://homehill:$$(cat /run/secrets/memos_db_password)@postgres.homehill.de:5432/memos?sslmode=disable"
     volumes:
       - type: volume
         source: memos-data
@@ -21,7 +21,7 @@ services:
       mode: replicated
       replicas: 1
       placement:
-        constraints: [node.hostname == greenhouse]
+        constraints: [node.hostname == greenhouse]  # <- Legacy constraint bleibt
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.memos.rule=Host(`memos.homehill.de`)"
@@ -29,20 +29,10 @@ services:
         - "traefik.http.routers.memos.tls.certresolver=hetzner"
         - "traefik.http.services.memos.loadbalancer.server.port=5230"
 
-secrets:
-  memos_db_password:
-    external: true
-
 volumes:
   memos-data:
     driver: local
     driver_opts:
       type: "nfs"
-      o: "addr=forest,nolock,soft,rw,nfsvers=4"
-      device: ":/memos"
-
-networks:
-  traefik_traefik_proxy:
-    external: true
-  postgres_database_network:
-    external: true
+      o: "addr=forest.homehill.de,nolock,soft,rw,nfsvers=4"
+      device: ":/nfs/memos/memos-svc"
