@@ -7,13 +7,30 @@ services:
     secrets:
       - memos_db_password
     entrypoint: ["/bin/sh", "-c"]
+    # Debug Version - mit verbose logging
     command:
       - |
+        echo "=== DEBUG: Starting memos setup ==="
+        echo "Environment vars:"
+        env | grep MEMOS || echo "No MEMOS vars found"
+
+        echo "=== Checking for memos binary ==="
+        which memos && echo "Found memos in PATH" || echo "memos not in PATH"
+        ls -la /app/memos 2>/dev/null && echo "Found /app/memos" || echo "No /app/memos"
+        ls -la ./memos 2>/dev/null && echo "Found ./memos" || echo "No ./memos"
+
+        echo "=== Setting up secrets ==="
         export MEMOS_PASSWORD=$$(cat /run/secrets/memos_db_password)
+        echo "Password length: $${#MEMOS_PASSWORD}"
+
+        echo "=== Final environment ==="
         export MEMOS_DRIVER=postgres
         export MEMOS_DSN="postgresql://homehill:$${MEMOS_PASSWORD}@postgres.homehill.de:5432/memos?sslmode=disable"
-        # Lass Docker das Original-Entrypoint finden:
+        echo "DSN set (length: $${#MEMOS_DSN})"
+
+        echo "=== Attempting to exec ==="
         exec $$(which memos) || exec ./memos || exec /app/memos
+
     volumes:
       - type: volume
         source: memos-data
