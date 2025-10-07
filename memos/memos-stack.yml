@@ -10,15 +10,14 @@ services:
     # Debug Version - mit verbose logging
     command:
       - |
-        echo "=== Working directory check ==="
-        pwd
-        ls -la
-        echo "=== Attempting to exec with full debug ==="
-        ./memos --help || echo "Help failed"
-        echo "=== Real exec ==="
-        ./memos
-    
-
+        export MEMOS_PASSWORD=$$(cat /run/secrets/memos_db_password)
+        echo "=== Starting with explicit flags ==="
+        ./memos \
+          --driver postgres \
+          --dsn "postgresql://homehill:$${MEMOS_PASSWORD}@postgres.homehill.de:5432/memos?sslmode=disable" \
+          --port 5230 \
+          --mode prod \
+          --data /var/opt/memos
     volumes:
       - type: volume
         source: memos-data
