@@ -8,7 +8,7 @@ services:
       - memos_db_password
     environment:
       MEMOS_DRIVER: postgres
-      # NO MEMOS_DSN here!
+      MEMOS_DSN_FILE: /run/secrets/memos_db_password
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
