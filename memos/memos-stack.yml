@@ -36,3 +36,7 @@ volumes:
       type: "nfs"
       o: "addr=forest.homehill.de,nolock,soft,rw,nfsvers=4"
       device: ":/nfs/memos/memos-svc" # path bc WD MyCloud NFS permission mapping
+
+secrets:
+  memos_db_password:
+    external: true
