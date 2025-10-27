@@ -7,8 +7,37 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ## [Unreleased]
 ### Planned
-- Memo 
 - Prometheus/Grafana monitoring stack
+
+---
+
+## [2025-10-27] Memos Service 📝
+### Added
+- Memos (self-hosted Notiz-/Journalsystem) mit PostgreSQL-Backend und Traefik-Routing  
+  - URL: https://memos.homehill.de  
+  - Swarm-Deploy mit Secrets, NFS-Persistenz und Dual-Network (Proxy + DB)  
+
+### Changed
+- Best Practice ergänzt: Bei Services mit mehreren Overlays das Label `traefik.docker.network=traefik_traefik_proxy` setzen, um die korrekte Upstream-IP (VIP) für Traefik sicherzustellen  
+
+### Fixed
+- 504 Gateway Timeout für Memos im Swarm  
+  - App bindet jetzt explizit an `0.0.0.0` via `--addr 0.0.0.0` (statt implizit `localhost`)  
+  - Traefik-Network-Disambiguation durch `traefik.docker.network=traefik_traefik_proxy`, wenn mehrere Overlays attached sind  
+
+### Troubleshooting Notes
+- Traefik-Dashboard prüfen: HTTP Service `memos@swarm` muss eine Server-IP aus dem Proxy-Overlay anzeigen  
+- Aus dem Traefik-Container direkten Request auf die `Server URL` testen (VIP:Port), um Overlay-/Routing-Mesh-Probleme auszuschließen  
+
+---
+
+## [2025.10.07]
+### Change
+- **hostnames** Project will from now on use FQHN. Old use of hostnames will be  
+changed when touched (but will not just be touched to be changed).
+- **serviceaccounts** Project will from now on use service accounts (for docker  
+and container use only) instead of real person's account (coder, mk3). Service  
+accounts will cluster wide use UIDs from 9000 to 9999. 
 
 ---
 
