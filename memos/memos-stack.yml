@@ -39,6 +39,7 @@ services:
         - "traefik.http.routers.memos.entrypoints=websecure"
         - "traefik.http.routers.memos.tls.certresolver=hetzner"
         - "traefik.http.services.memos.loadbalancer.server.port=5230"
+        - "traefik.docker.network=traefik_traefik_proxy"
 
 volumes:
   memos-data:
