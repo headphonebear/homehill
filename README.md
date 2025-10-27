@@ -80,6 +80,15 @@ Navidrome serves the homelab's extensive FLAC music collection (~1650 albums acr
 - Supports push notifications, webhooks, and real-time subscriptions
 - Perfect for homelab monitoring and alerts
 
+## 📝 Notes & Knowledge Management
+
+**Memos** – Self-hosted Notizen & Journal  
+- Zugang: https://memos.homehill.de  
+- Backend: PostgreSQL (gemeinsames `postgres_database_network`)  
+- Reverse Proxy: Traefik (Overlay `traefik_traefik_proxy`)  
+- Erster Start: Registrierung der Site-Host-Account direkt im Web-UI  
+- Persistenz: NFS-Volume unter `/nfs/memos/memos-svc` (gemountet nach `/var/opt/memos`)  
+
 ### Data & Storage
 
 **[PostgreSQL](postgres/)**: Shared database service for applications
