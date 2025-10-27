@@ -16,6 +16,7 @@ services:
           --driver postgres \
           --dsn "postgresql://memos_user:$${MEMOS_PASSWORD}@postgres_postgres:5432/memos?sslmode=disable" \
           --port 5230 \
+          --addr 0.0.0.0 \
           --mode prod \
           --data /var/opt/memos
     volumes:
