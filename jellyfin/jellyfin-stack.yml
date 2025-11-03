@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    user: 7003:7003  # jellyfin-svc UID/GID
+    hostname: jellyfin
+    environment:
+      - TZ=Europe/Berlin
+      - JELLYFIN_CONFIG_DIR=/config
+      - JELLYFIN_DATA_DIR=/data
+      - JELLYFIN_LOG_DIR=/logs
+      - JELLYFIN_CACHE_DIR=/cache
+      - PGID=7003
+      - PUID=7003
+
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        chown -R 7003:7003 /config /data /logs /cache 2>/dev/null || true
+        exec /jellyfin/jellyfin \
+          --datadir /data \
+          --configdir /config \
+          --logdir /logs \
+          --cachedir /cache
+
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_data:/data
+      - jellyfin_logs:/logs
+      - jellyfin_cache:/cache
+
+      # Musik (Owned by mk3, read-only)
+      - /mnt/mk3/mk3.album:/media/music/albums:ro
+      - /mnt/mk3/mk3.classic:/media/music/classical:ro
+      - /mnt/mk3/mk3.io:/media/music/bandcamp:ro
+
+      # Filme (Owned by misty, read-only)
+      - /mnt/misty/movies/vanilla:/media/movies/vanilla:ro
+      - /mnt/misty/movies/rudelbums:/media/movies/diverse:ro
+      - /mnt/misty/movies/arthaus:/media/movies/arthaus:ro
+
+    networks:
+      - traefik_traefik_proxy
+      - jellyfin_network
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == nook
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik_traefik_proxy"
+        - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.homehill.de`)"
+        - "traefik.http.routers.jellyfin.entrypoints=websecure"
+        - "traefik.http.routers.jellyfin.tls=true"
+        - "traefik.http.routers.jellyfin.tls.certresolver=hetzner"
+        - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+
+networks:
+  traefik_traefik_proxy:
+    external: true
+  jellyfin_network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  jellyfin_config:
+  jellyfin_data:
+  jellyfin_logs:
+  jellyfin_cache:
