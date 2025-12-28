@@ -4,19 +4,53 @@
 version: '3.8'
 
 services:
+  # Traefik - Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: mk3-traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.mk3.homehill.de`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASIC_AUTH}"
+    networks:
+      - mk3-net
+
   # Jellyfin - Media Streaming
   jellyfin:
     image: jellyfin/jellyfin:latest
     container_name: mk3-jellyfin
     restart: unless-stopped
+    user: "2001:2001"  # mk3 user
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
       - TZ=${TZ:-Europe/Berlin}
     volumes:
       - jellyfin-config:/config
       - jellyfin-cache:/cache
-      - /srv/music:/music:ro
+      - /srv/music/mk3:/music/mk3:ro
+      - /srv/music/io1:/music/io1:ro
+      - /srv/music/cl1:/music/cl1:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.mk3.homehill.de`)"
@@ -25,21 +59,27 @@ services:
       - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
     networks:
       - mk3-net
+    depends_on:
+      - traefik
 
   # Navidrome - Subsonic API
   navidrome:
     image: deluan/navidrome:latest
     container_name: mk3-navidrome
     restart: unless-stopped
+    user: "2001:2001"  # mk3 user
     environment:
-      - ND_MUSICFOLDER=/music/flac
+      - ND_MUSICFOLDER=/music
       - ND_DATAFOLDER=/data
       - ND_LOGLEVEL=info
       - ND_SESSIONTIMEOUT=24h
       - ND_BASEURL=https://navidrome.mk3.homehill.de
+      - ND_ENABLETRANSCODINGCONFIG=true
     volumes:
       - navidrome-data:/data
-      - /srv/music:/music:ro
+      - /srv/music/mk3:/music/mk3:ro
+      - /srv/music/io1:/music/io1:ro
+      - /srv/music/cl1:/music/cl1:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.navidrome.rule=Host(`navidrome.mk3.homehill.de`)"
@@ -48,6 +88,27 @@ services:
       - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
     networks:
       - mk3-net
+    depends_on:
+      - traefik
+
+  # DragonflyDB - High-Performance In-Memory Cache
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    container_name: mk3-dragonfly
+    restart: unless-stopped
+    command:
+      - --maxmemory=2gb
+      - --save_schedule="*:00"  # Snapshots every hour at :00
+      - --dir=/data
+    volumes:
+      - dragonfly-data:/data
+    networks:
+      - mk3-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # PostgreSQL - Music Metadata Database
   postgres:
@@ -62,24 +123,19 @@ services:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - mk3-net
-
-  # Redis - Caching & Queues
-  redis:
-    image: redis:7-alpine
-    container_name: mk3-redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    volumes:
-      - redis-data:/data
-    networks:
-      - mk3-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
+  traefik-certs:
   jellyfin-config:
   jellyfin-cache:
   navidrome-data:
   postgres-data:
-  redis-data:
+  dragonfly-data:
 
 networks:
   mk3-net:
