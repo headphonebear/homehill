@@ -49,6 +49,8 @@ services:
       - /srv/music/mk3:/music/mk3:ro
       - /srv/music/io1:/music/io1:ro
       - /srv/music/cl1:/music/cl1:ro
+    ports:
+      - "8096:8096"  # Direct access for mobile apps
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.mk3.homehill.de`)"
