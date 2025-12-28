@@ -77,7 +77,7 @@ services:
       - navidrome-data:/data
       - /srv/music/mk3:/music/mk3:ro
       - /srv/music/io1:/music/io1:ro
-      - /srv/music/cl1:/music/io1:ro
+      - /srv/music/cl1:/music/cl1:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.navidrome.rule=Host(`navidrome.mk3.homehill.de`)"
@@ -96,7 +96,7 @@ services:
     restart: unless-stopped
     command:
       - --maxmemory=2gb
-      - --save_schedule="*:00"  # Snapshots every hour at :00
+      - --snapshot_cron=0 * * * *  # Hourly snapshots at :00
       - --dir=/data
     volumes:
       - dragonfly-data:/data
