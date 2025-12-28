@@ -1,0 +1,11 @@
+# Legacy Docker Swarm Services
+
+This directory contains Docker Swarm service configurations that are being phased out in favor of:
+- Kubernetes Orchard Cluster (`clusters/orchard/`)
+- Standalone servers (`servers/`)
+
+## Migration Status
+
+Services in this directory are still operational but scheduled for migration in 2025 Q1-Q2.
+
+See `docs/architecture.md` for migration timeline.

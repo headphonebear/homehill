@@ -1,0 +1,15 @@
+# Orchard Kubernetes Cluster
+
+This directory will contain Kubernetes manifests and configuration for the Orchard cluster.
+
+## Nodes
+- apple (control plane + worker)
+- lemon (worker)  
+- plum (worker)
+
+## Stack
+- K3s (lightweight Kubernetes)
+- Traefik Ingress Controller
+- Future: Longhorn, MetalLB, ArgoCD
+
+See `docs/architecture.md` for details.
