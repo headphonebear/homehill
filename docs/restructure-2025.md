@@ -60,8 +60,6 @@ homehill/
 │   │   ├── docker-compose.yml
 │   │   ├── .env.example
 │   │   └── .gitignore
-│   ├── cl1/                     # Cloudron (planned)
-│   └── io1/                     # IoT gateway (planned)
 └── shared/                      # NEW: Reusable configs
     ├── traefik-base/
     └── backup-scripts/

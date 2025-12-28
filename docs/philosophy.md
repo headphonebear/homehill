@@ -44,8 +44,6 @@ Tools should be pleasant to use. Ana's design identity, Lina's art, thoughtful U
 - **nook**: The wise elder (8GB RAM, master DragonflyDB)
 - **greenhouse**: The reliable worker (4GB RAM, replica)
 - **mk3**: The music connoisseur (32GB RAM, PN50, Ana's baby)
-- **cl1**: The community organizer (Cloudron apps)
-- **io1**: The sensor network (IoT gateway)
 
 ---
 

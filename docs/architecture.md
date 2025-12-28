@@ -53,7 +53,7 @@ Homehill is a **hybrid homelab ecosystem** transitioning from Docker Swarm to Ku
 **Nodes:**
 - `apple` (control plane + worker)
 - `lemon` (worker)
-- `blueberry` (worker)
+- `plum` (worker)
 
 **Stack:**
 - K3s (lightweight Kubernetes)
