@@ -4,7 +4,7 @@
 version: '3.8'
 
 services:
-  # Traefik - Reverse Proxy
+  # Traefik - Reverse Proxy (Internal with Self-Signed Certs)
   traefik:
     image: traefik:v3.0
     container_name: mk3-traefik
@@ -17,9 +17,7 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --entrypoints.websecure.http.tls=true
     ports:
       - "80:80"
       - "443:443"
@@ -30,7 +28,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.rule=Host(`traefik.mk3.homehill.de`)"
       - "traefik.http.routers.traefik.entrypoints=websecure"
-      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.tls=true"
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASIC_AUTH}"
@@ -55,7 +53,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.mk3.homehill.de`)"
       - "traefik.http.routers.jellyfin.entrypoints=websecure"
-      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.jellyfin.tls=true"
       - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
     networks:
       - mk3-net
@@ -84,7 +82,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.navidrome.rule=Host(`navidrome.mk3.homehill.de`)"
       - "traefik.http.routers.navidrome.entrypoints=websecure"
-      - "traefik.http.routers.navidrome.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.navidrome.tls=true"
       - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
     networks:
       - mk3-net

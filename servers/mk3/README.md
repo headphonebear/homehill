@@ -13,7 +13,7 @@
 
 - **Naked OS Brutalism**: Alpine Linux minimal base
 - **MusicBrainz Policy Enforcement**: Metadata perfection
-- **Remote-First Design**: Control from anywhere
+- **Remote-First Design**: Control from anywhere (internal network)
 - **Elegant Autonomy**: Self-managing, intelligent, playful
 
 > "Nicht hübsch, aber elegant.  
@@ -24,8 +24,8 @@
 ## Hardware
 
 **ASUS PN50** (Ryzen 5, 32GB RAM)
-- **System Storage**: 512GB SSD
-- **Music Storage**: 1TB SSD (gapless, optimized)
+- **System Storage**: 512GB NVMe SSD
+- **Music Storage**: 1TB SSD (Btrfs with subvolumes)
 - **Network**: Wired only (stability > convenience)
 - **Cooling**: Quiet (the listener is more important than the server)
 - **BIOS**: Eco-Mode enabled
@@ -38,10 +38,10 @@
 - **Jellyfin**: Media streaming with rich web interface
 - **Navidrome**: Subsonic-compatible API for mobile apps
 - **PostgreSQL**: Music metadata database
+- **DragonflyDB**: High-performance Redis-compatible cache (25x faster!)
 
 ### Support Infrastructure
-- **Traefik**: Reverse proxy (`*.mk3.homehill.de`)
-- **Redis**: Worker queues and caching
+- **Traefik**: Reverse proxy with self-signed TLS certificates
 
 ### Planned Features
 - **mk3-app**: MusicBrainz enforcement, AI assistant, management dashboard
@@ -67,46 +67,157 @@
 ### Prerequisites
 - Alpine Linux installed on PN50
 - Docker + Docker Compose
-- Storage mounted at `/srv/music`
-- Domain DNS configured: `*.mk3.homehill.de`
+- User `mk3` (UID/GID 2001:2001) with Docker permissions
+- Storage mounted at `/srv/music` with Btrfs subvolumes:
+  - `/srv/music/mk3` - Ripped CDs (FLAC)
+  - `/srv/music/io1` - Bandcamp purchases (FLAC)
+  - `/srv/music/cl1` - Classical music (FLAC)
+- Pi-hole DNS: `mk3.homehill.de` → `192.168.1.192`
+
+### Setup mk3 User with Docker Access
+
+```bash
+# As root:
+addgroup mk3 docker
+
+# Verify:
+su - mk3
+docker ps  # Should work without sudo
+```
 
 ### Quick Start
 
 ```bash
-# Clone homehill repo
+# As mk3 user:
+cd ~
 git clone https://github.com/headphonebear/homehill.git
-cd homehill/servers/mk3
+cd homehill
+git checkout restructure-2025
+cd servers/mk3
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your settings
+nano .env  # Fill in PostgreSQL password and Traefik BasicAuth
 
 # Start services
 docker compose up -d
 
 # Check status
 docker compose ps
+docker compose logs -f
+```
+
+### Trust Self-Signed Certificate
+
+**mk3 uses self-signed TLS certificates** for internal-only access (no external IP exposure).
+
+**On your laptop/desktop:**
+
+**Option 1: Accept browser warning**
+- Visit `https://jellyfin.mk3.homehill.de`
+- Click "Advanced" → "Proceed anyway"
+- Do this once per service
+
+**Option 2: Export Traefik cert and trust it** (recommended)
+```bash
+# On mk3 server:
+docker exec mk3-traefik cat /letsencrypt/certs/default.crt > ~/traefik-mk3.crt
+
+# Copy to your laptop
+scp mk3@mk3.homehill.de:~/traefik-mk3.crt .
+
+# macOS: Add to Keychain
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain traefik-mk3.crt
+
+# Linux: Add to ca-certificates
+sudo cp traefik-mk3.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+
+# Windows: Import into Trusted Root Certification Authorities
 ```
 
 ### First Run
 
-1. Access Jellyfin: `https://jellyfin.mk3.homehill.de`
-2. Complete initial setup wizard
-3. Add music library: `/music`
-4. Let it scan your FLACs
-5. Access Navidrome: `https://navidrome.mk3.homehill.de`
-6. Configure Subsonic client
+1. **Access Jellyfin**: `https://jellyfin.mk3.homehill.de`
+   - Complete initial setup wizard
+   - Create admin user
+   - Add libraries:
+     - `/music/mk3` (Ripped CDs)
+     - `/music/io1` (Bandcamp)
+     - `/music/cl1` (Classical)
+   - Let it scan (this takes time for 626GB!)
+
+2. **Access Navidrome**: `https://navidrome.mk3.homehill.de`
+   - Create admin user
+   - Music folders are pre-configured
+   - Test with Subsonic client (DSub, Ultrasonic, etc.)
+
+3. **Access Traefik Dashboard**: `https://traefik.mk3.homehill.de`
+   - Login with BasicAuth credentials from `.env`
+   - See all routed services
 
 ---
 
 ## Storage Layout
 
 ```
-/srv/music/                    # 1TB SSD mount
-├── flac/                      # Source FLAC files (organized by artist/album)
-├── mp3/                       # Converted MP3s (for portable devices)
-├── playlists/                 # Curated playlists
-└── metadata/                  # MusicBrainz cache
+/srv/music/                    # 1TB Btrfs (931GB total)
+├── mk3/                       # Subvolume: Ripped CDs (~626GB used)
+├── io1/                       # Subvolume: Bandcamp purchases
+├── cl1/                       # Subvolume: Classical music
+└── rs1/                       # Subvolume: Reserved for future use
+```
+
+**Btrfs Snapshots:**
+```bash
+# Create snapshot
+sudo btrfs subvolume snapshot -r /srv/music/mk3 /srv/music/mk3-snapshot-$(date +%Y%m%d)
+
+# List snapshots
+sudo btrfs subvolume list /srv/music
+
+# Restore from snapshot (if needed)
+sudo btrfs subvolume delete /srv/music/mk3
+sudo btrfs subvolume snapshot /srv/music/mk3-snapshot-20251228 /srv/music/mk3
+```
+
+---
+
+## Troubleshooting
+
+### Services won't start
+```bash
+# Check logs
+docker compose logs
+
+# Check if mk3 user has Docker access
+groups mk3  # Should include 'docker'
+
+# Verify storage is mounted
+ls -la /srv/music/mk3
+```
+
+### Certificate errors
+- **Expected!** Self-signed certificates trigger browser warnings
+- Either accept warnings or trust certificate (see above)
+- For production with external access, use Let's Encrypt (requires port forwarding)
+
+### Jellyfin can't see music files
+```bash
+# Check permissions
+ls -la /srv/music/mk3  # Should be owned by mk3:mk3 (2001:2001)
+
+# Fix if needed
+sudo chown -R mk3:mk3 /srv/music/mk3
+```
+
+### PostgreSQL won't start
+```bash
+# Check password in .env
+cat .env | grep POSTGRES_PASSWORD
+
+# Check volume
+docker volume inspect mk3_postgres-data
 ```
 
 ---
@@ -115,10 +226,13 @@ docker compose ps
 
 ### Phase 1: Core Streaming ✓
 - [x] Docker infrastructure
+- [x] Traefik with self-signed certs
 - [x] Jellyfin deployment
 - [x] Navidrome deployment
-- [x] Storage mounted
-- [ ] Initial FLAC scan
+- [x] DragonflyDB cache
+- [x] PostgreSQL database
+- [x] Storage mounted (Btrfs subvolumes)
+- [ ] Initial FLAC scan complete
 
 ### Phase 2: Metadata Enforcement
 - [ ] PostgreSQL schema design
@@ -142,19 +256,19 @@ docker compose ps
 
 ## Backup Strategy
 
-- **Frequency**: Daily snapshots (Btrfs)
-- **Remote**: S3-compatible storage (restic)
+- **Frequency**: Daily Btrfs snapshots
+- **Remote**: S3-compatible storage (restic) - planned
 - **Retention**: 7 daily, 4 weekly, 12 monthly
-- **Recovery**: Automated restore scripts
+- **Recovery**: Btrfs snapshot restore
 
 ---
 
 ## Monitoring
 
-- **Health checks**: `/health` endpoints
-- **Metrics**: Prometheus + Grafana (planned)
-- **Logs**: Centralized via Elasticsearch
-- **Alerts**: ntfy notifications
+- **Health checks**: Built-in Docker healthchecks
+- **Logs**: `docker compose logs`
+- **Traefik Dashboard**: Real-time service status
+- **Future**: Prometheus + Grafana, Elasticsearch + Kibana
 
 ---
 
@@ -163,7 +277,7 @@ docker compose ps
 **Built with love by:**
 - 🐻 **Headphonebear**: Vision, music curation, infrastructure
 - 🦊 **Ana**: Architecture, design, elegance
-- 🎨 **Lina**: Visual identity, branding
+- 🎨 **Lina**: Visual identity, branding (planned)
 
 *This is not just a server. This is art.*
 
