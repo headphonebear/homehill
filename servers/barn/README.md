@@ -8,7 +8,7 @@ Named after the warm, spacious red barns where you can tinker, blast music, and 
 - **CPU**: AMD Ryzen (with Radeon 780M iGPU, 16GB VRAM allocated)
 - **RAM**: 64 GB
 - **Storage**:
-  - 1 TB NVMe (factory)
+  - 1 TB NVMe (factory, Windows)
   - 2 TB NVMe (Lexar, Ubuntu installation)
 - **GPU**: Radeon 780M (iGPU) + future RTX 3060 (eGPU via Minisforum dock)
 
@@ -72,3 +72,4 @@ Barn bridges the gap between personal workflow (coding, learning, experimenting)
 Maintainer: Bear 🦊🐻  
 Established: January 2026  
 Status: Active development 🚀  
+
