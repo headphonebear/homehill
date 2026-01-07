@@ -8,22 +8,6 @@ Built with passion by [Headphonebear](https://github.com/headphonebear) 🐻 and
 
 ---
 
-## 🎨 Design Philosophy
-
-### Naked OS Brutalism
-Alpine Linux minimal base. No bloat. No compromise. Every service earns its place.
-
-### Elegant Autonomy
-Self-managing systems that know when to heal, when to scale, when to sleep. Intelligent infrastructure that respects the listener.
-
-### MusicBrainz Policy Enforcement
-Metadata perfection is not optional. Every FLAC file tells its story correctly, or it doesn't play.
-
-### Remote-First Design
-Control from anywhere (within Homehill network). The server is the servant, not the master.
-
----
-
 ## 🏗️ Architecture
 
 ```
@@ -35,7 +19,8 @@ homehill/
 │       ├── PostgreSQL   # Metadata database
 │       ├── DragonflyDB  # High-performance cache (25x faster than Redis)
 │       └── Traefik      # Reverse proxy with self-signed TLS
-│
+│   └── barn/            # A Desktop running Docker
+│       └── Portainer    # Easy Container overview for all users
 ├── clusters/             # Kubernetes clusters
 │   └── orchard/         # K3s cluster (apple, lemon, plum)
 │       └── manifests/   # Kubernetes manifests
@@ -54,6 +39,20 @@ homehill/
 ## 🎵 mk3 - Music Server
 
 ### The Jewel of Homehill
+
+## 🎨 Design Philosophy
+
+### Naked OS Brutalism
+Alpine Linux minimal base. No bloat. No compromise. Every service earns its place.
+
+### Elegant Autonomy
+Self-managing systems that know when to heal, when to scale, when to sleep. Intelligent infrastructure that respects the listener.
+
+### MusicBrainz Policy Enforcement
+Metadata perfection is not optional. Every FLAC file tells its story correctly, or it doesn't play.
+
+### Remote-First Design
+Control from anywhere (within Homehill network). The server is the servant, not the master.
 
 **mk3** is not just a music server - it's a carefully crafted listening experience. Built on an ASUS PN50 (Ryzen 5, 32GB RAM) with 1TB SSD storage, it serves 626GB of meticulously curated FLAC files.
 
