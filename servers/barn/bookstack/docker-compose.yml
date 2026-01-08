@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  bookstack:
+    image: linuxserver/bookstack:latest
+    container_name: bookstack
+    environment:
+      - PUID=2003            # coder-UID
+      - PGID=2003            # coder-GID
+      - TZ=Europe/Berlin
+      - APP_URL=http://localhost:8282
+      - DB_HOST=bookstack_db
+      - DB_USER=bookstack
+      - DB_PASS=obvious_local_password
+      - DB_DATABASE=bookstack
+    volumes:
+      - ./config:/config
+    ports:
+      - "8282:80"
+    depends_on:
+      - bookstack_db
+    restart: unless-stopped
+
+  bookstack_db:
+    image: mariadb:10.11
+    container_name: bookstack_db
+    environment:
+      - MYSQL_ROOT_PASSWORD=obvious_local_password
+      - MYSQL_DATABASE=bookstack
+      - MYSQL_USER=bookstack
+      - MYSQL_PASSWORD=obvious_local_password
+    volumes:
+      - ./db:/var/lib/mysql
+    restart: unless-stopped
