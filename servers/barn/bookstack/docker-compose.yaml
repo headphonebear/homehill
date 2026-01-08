@@ -13,6 +13,7 @@ services:
       - DB_USER=bookstack
       - DB_PASS=obvious_local_password
       - DB_DATABASE=bookstack
+      - APP_KEY="base64:Kk5283lUx+y1PzoabyXThlJT/N5EVa7nkvidwpv2hlw="
     volumes:
       - ./config:/config
     ports:
