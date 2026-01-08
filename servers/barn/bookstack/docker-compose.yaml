@@ -5,14 +5,16 @@ services:
     image: linuxserver/bookstack:latest
     container_name: bookstack
     environment:
-      - PUID=2003            # coder-UID
-      - PGID=2003            # coder-GID
-      - TZ=Europe/Berlin
-      - APP_URL=http://localhost:8282
       - DB_HOST=bookstack_db
+      - DB_PORT=3306
       - DB_USER=bookstack
       - DB_PASS=obvious_local_password
       - DB_DATABASE=bookstack
+      - DB_CONNECTION=mysql
+      - APP_URL=http://localhost:8282
+      - PUID=2003
+      - PGID=2003
+      - TZ=Europe/Berlin
       - APP_KEY="base64:Kk5283lUx+y1PzoabyXThlJT/N5EVa7nkvidwpv2hlw="
     volumes:
       - ./config:/config
