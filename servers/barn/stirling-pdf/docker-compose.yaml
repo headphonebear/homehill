@@ -1,0 +1,14 @@
+services:
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest
+    container_name: stirling-pdf
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs:/configs
+      - ./data:/usr/share/tessdata
+    environment:
+      - PUID=2003
+      - PGID=2003
+      - TZ=Europe/Berlin
