@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  stable-diffusion-rocm:
+    image: l1naforever/stable-diffusion-rocm:latest
+    container_name: stable-diffusion-barn
+    restart: unless-stopped
+
+    # GPU & System Resources
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+    ipc: host
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+
+    # ROCm für Radeon 780M (gfx1103)
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=11.0.3
+
+    # Network & Ports
+    network_mode: host
+    ports:
+      - "7860:7860"  # AUTOMATIC1111 WebUI
+
+    # Volumes
+    volumes:
+      - ./data:/data                    # Models, outputs, config
+      - ./outputs:/data/outputs         # Generated images
+
+    stdin_open: true
+    tty: true
