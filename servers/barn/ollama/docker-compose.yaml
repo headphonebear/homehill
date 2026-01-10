@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  ollama:
+    image: ollama/ollama:rocm
+    container_name: ollama-barn
+    restart: unless-stopped
+
+    # GPU & System Access
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - "39"   # video group
+      - "105"  # render group
+    ipc: host
+
+    # ROCm für Radeon 780M (gfx1003)
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=10.3.0
+
+    # Ports
+    ports:
+      - "11434:11434"  # Ollama API
+
+    # Volumes (persistent model storage on /srv)
+    volumes:
+      - ./models:/root/.ollama/models
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui-barn
+    restart: unless-stopped
+
+    ports:
+      - "3000:8080"
+
+    environment:
+      - OLLAMA_BASE_URL=http://ollama-barn:11434
+
+    volumes:
+      - ./webui:/app/backend/data
+
+    depends_on:
+      - ollama
