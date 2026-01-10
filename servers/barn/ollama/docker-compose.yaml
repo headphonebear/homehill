@@ -23,9 +23,10 @@ services:
     ports:
       - "11434:11434"  # Ollama API
 
-    # Volumes (persistent model storage on /srv)
+    # Volumes – WICHTIG: Ganzes ~/.ollama mounten + /srv für Models
     volumes:
-      - ./models:/root/.ollama/models
+      - ollama-data:/root/.ollama           # Container-Internals (config, cache)
+      - /srv/docker/ollama/models:/root/.ollama/models  # Persistent models on /srv
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -39,7 +40,14 @@ services:
       - OLLAMA_BASE_URL=http://ollama-barn:11434
 
     volumes:
-      - ./webui:/app/backend/data
+      - open-webui-data:/app/backend/data
 
     depends_on:
       - ollama
+
+# Named volumes für Ollama's interne State
+volumes:
+  ollama-data:
+    driver: local
+  open-webui-data:
+    driver: local
