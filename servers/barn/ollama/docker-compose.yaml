@@ -8,26 +8,23 @@ services:
 
     # GPU & System Access
     devices:
-      - /dev/kfd:/dev/kfd
-      - /dev/dri:/dev/dri
+      - /dev/kfd
+      - /dev/dri
     group_add:
       - "39"   # video group
       - "105"  # render group
-    ipc: host
 
-    # ROCm für Radeon 780M (gfx1003)
+    # ROCm für Radeon 780M
     environment:
       - HSA_OVERRIDE_GFX_VERSION=10.3.0
-      - OLLAMA_DEBUG=1
 
     # Ports
     ports:
-      - "11434:11434"  # Ollama API
+      - "11434:11434"
 
-    # Volumes – Named for config + Bind mount to /srv for models
+    # Volumes – WICHTIG: Ganzes ~/.ollama mounten!
     volumes:
-      - ollama-data:/root/.ollama           # Container-Internals (config, cache, locks)
-      - /srv/docker/ollama/models:/root/.ollama/models  # Persistent models on /srv
+      - /srv/docker/ollama/data:/root/.ollama  # GANZES Verzeichnis auf /srv!
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
@@ -41,19 +38,7 @@ services:
       - OLLAMA_BASE_URL=http://ollama-barn:11434
 
     volumes:
-      - open-webui-data:/app/backend/data
+      - /srv/docker/open-webui/data:/app/backend/data
 
     depends_on:
       - ollama
-
-# Named volumes für Ollama's interne State (persists via Docker Volume Driver)
-volumes:
-  ollama-data:
-    driver: local
-  open-webui-data:
-    driver: local
-
-# Network for Portainer Stack management
-networks:
-  default:
-    name: barn-network
