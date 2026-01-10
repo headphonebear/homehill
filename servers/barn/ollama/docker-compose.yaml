@@ -18,14 +18,15 @@ services:
     # ROCm für Radeon 780M (gfx1003)
     environment:
       - HSA_OVERRIDE_GFX_VERSION=10.3.0
+      - OLLAMA_DEBUG=1
 
     # Ports
     ports:
       - "11434:11434"  # Ollama API
 
-    # Volumes – WICHTIG: Ganzes ~/.ollama mounten + /srv für Models
+    # Volumes – Named for config + Bind mount to /srv for models
     volumes:
-      - ollama-data:/root/.ollama           # Container-Internals (config, cache)
+      - ollama-data:/root/.ollama           # Container-Internals (config, cache, locks)
       - /srv/docker/ollama/models:/root/.ollama/models  # Persistent models on /srv
 
   open-webui:
@@ -45,9 +46,14 @@ services:
     depends_on:
       - ollama
 
-# Named volumes für Ollama's interne State
+# Named volumes für Ollama's interne State (persists via Docker Volume Driver)
 volumes:
   ollama-data:
     driver: local
   open-webui-data:
     driver: local
+
+# Network for Portainer Stack management
+networks:
+  default:
+    name: barn-network
