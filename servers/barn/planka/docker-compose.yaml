@@ -5,7 +5,7 @@ services:
     ports:
       - "3000:1337"
     environment:
-      - BASE_URL=http://barn.local:3000
+      - BASE_URL=http://barn.local:3001
       - DATABASE_URL=postgresql://postgres@postgres/planka
       - SECRET_KEY=GenerierMichMitOpenSSLRandHex32
       - DEFAULT_ADMIN_EMAIL=bear@homehill.local
