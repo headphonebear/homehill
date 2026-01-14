@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  dumbkan:
+    image: dumbwareio/dumbkan:latest
+    container_name: dumbkan
+    restart: unless-stopped
+    ports:
+      - "3001:3000"  # Weil 3000 ja Grafana ist 😉
+    volumes:
+      - dumbkan-data:/app/data
+    environment:
+      - DUMBKAN_PIN=  # Optional: Setze einen PIN wenn du willst
+
+volumes:
+  dumbkan-data:
