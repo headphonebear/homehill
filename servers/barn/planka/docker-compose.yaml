@@ -3,7 +3,7 @@ services:
     image: ghcr.io/plankanban/planka:2.0.0-rc.4
     restart: unless-stopped
     ports:
-      - "3000:1337"
+      - "3001:1337"
     environment:
       - BASE_URL=http://barn.local:3001
       - DATABASE_URL=postgresql://postgres@postgres/planka
