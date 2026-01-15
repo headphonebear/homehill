@@ -1,16 +1,15 @@
 version: '3.8'
 
 services:
+  # DumbKan - Kanban Board
   dumbkan:
     image: dumbwareio/dumbkan:latest
-    container_name: dumbware
+    container_name: dumbkan
     restart: unless-stopped
     ports:
       - "3337:3000"
     volumes:
-      - dumbware-data:/app/data
-    environment:
-      - DUMBKAN_PIN=  # Optional PIN
+      - dumbkan-data:/app/data
 
   # DumbDo - Todo Lists
   dumbdo:
@@ -21,11 +20,8 @@ services:
       - "3334:3000"
     volumes:
       - dumbdo-data:/app/data
-    environment:
-      - DUMBDO_PIN=  # Optional PIN
-      - SINGLE_LIST=false  # Multiple lists!
 
-  # DumbPad - Notizblock mit Auto-Save
+  # DumbPad - Notizblock
   dumbpad:
     image: dumbwareio/dumbpad:latest
     container_name: dumbpad
@@ -34,8 +30,6 @@ services:
       - "3336:3000"
     volumes:
       - dumbpad-data:/app/data
-    environment:
-      - DUMBPAD_PIN=  # Optional PIN
 
   # DumbDrop - File Upload
   dumbdrop:
@@ -46,9 +40,6 @@ services:
       - "3335:3000"
     volumes:
       - dumbdrop-data:/app/uploads
-    environment:
-      - DUMBDROP_PIN=  # Optional PIN
-      - MAX_SIZE=100  # Max file size in MB
 
   # DumbBudget - Budget Tracker
   dumbbudget:
@@ -60,11 +51,9 @@ services:
     volumes:
       - dumbbudget-data:/app/data
     environment:
-      - DUMBBUDGET_PIN=  # Optional PIN
       - CURRENCY=EUR
-      - INSTANCE_NAME=Homehill Budget
 
-  # DumbAssets - Asset/Hardware Tracker
+  # DumbAssets - Asset Tracker
   dumbassets:
     image: dumbwareio/dumbassets:latest
     container_name: dumbassets
@@ -73,8 +62,6 @@ services:
       - "3338:3000"
     volumes:
       - dumbassets-data:/app/data
-    environment:
-      - DUMBASSETS_PIN=  # Optional PIN
 
 volumes:
   dumbkan-data:
