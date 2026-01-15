@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # DumbKan - Kanban Board (läuft schon!)
   dumbkan:
     image: dumbwareio/dumbkan:latest
     container_name: dumbware
