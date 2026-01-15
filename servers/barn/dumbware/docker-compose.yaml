@@ -4,12 +4,12 @@ services:
   # DumbKan - Kanban Board (läuft schon!)
   dumbkan:
     image: dumbwareio/dumbkan:latest
-    container_name: dumbkan
+    container_name: dumbware
     restart: unless-stopped
     ports:
       - "3337:3000"
     volumes:
-      - dumbkan-data:/app/data
+      - dumbware-data:/app/data
     environment:
       - DUMBKAN_PIN=  # Optional PIN
 
