@@ -1,16 +1,86 @@
 version: '3.8'
 
 services:
+  # DumbKan - Kanban Board (läuft schon!)
   dumbkan:
     image: dumbwareio/dumbkan:latest
     container_name: dumbkan
     restart: unless-stopped
     ports:
-      - "3001:3000"  # Weil 3000 ja Grafana ist 😉
+      - "3337:3000"
     volumes:
       - dumbkan-data:/app/data
     environment:
-      - DUMBKAN_PIN=  # Optional: Setze einen PIN wenn du willst
+      - DUMBKAN_PIN=  # Optional PIN
+
+  # DumbDo - Todo Lists
+  dumbdo:
+    image: dumbwareio/dumbdo:latest
+    container_name: dumbdo
+    restart: unless-stopped
+    ports:
+      - "3334:3000"
+    volumes:
+      - dumbdo-data:/app/data
+    environment:
+      - DUMBDO_PIN=  # Optional PIN
+      - SINGLE_LIST=false  # Multiple lists!
+
+  # DumbPad - Notizblock mit Auto-Save
+  dumbpad:
+    image: dumbwareio/dumbpad:latest
+    container_name: dumbpad
+    restart: unless-stopped
+    ports:
+      - "3336:3000"
+    volumes:
+      - dumbpad-data:/app/data
+    environment:
+      - DUMBPAD_PIN=  # Optional PIN
+
+  # DumbDrop - File Upload
+  dumbdrop:
+    image: dumbwareio/dumbdrop:latest
+    container_name: dumbdrop
+    restart: unless-stopped
+    ports:
+      - "3335:3000"
+    volumes:
+      - dumbdrop-data:/app/uploads
+    environment:
+      - DUMBDROP_PIN=  # Optional PIN
+      - MAX_SIZE=100  # Max file size in MB
+
+  # DumbBudget - Budget Tracker
+  dumbbudget:
+    image: dumbwareio/dumbbudget:latest
+    container_name: dumbbudget
+    restart: unless-stopped
+    ports:
+      - "3333:3000"
+    volumes:
+      - dumbbudget-data:/app/data
+    environment:
+      - DUMBBUDGET_PIN=  # Optional PIN
+      - CURRENCY=EUR
+      - INSTANCE_NAME=Homehill Budget
+
+  # DumbAssets - Asset/Hardware Tracker
+  dumbassets:
+    image: dumbwareio/dumbassets:latest
+    container_name: dumbassets
+    restart: unless-stopped
+    ports:
+      - "3338:3000"
+    volumes:
+      - dumbassets-data:/app/data
+    environment:
+      - DUMBASSETS_PIN=  # Optional PIN
 
 volumes:
   dumbkan-data:
+  dumbdo-data:
+  dumbpad-data:
+  dumbdrop-data:
+  dumbbudget-data:
+  dumbassets-data:
