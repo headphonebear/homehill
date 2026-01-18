@@ -29,7 +29,7 @@
 
 **Homehill** is a multi-platform home infrastructure consisting of:
 - **Standalone servers** (Alpine Linux + Docker Compose)
-- **Kubernetes cluster** (K3s on Raspberry Pi)
+- **Kubernetes cluster** (K3s on GMKtec Nucbox G3 Plus N150 16 GB Ram / 1 TB SSD)
 - **Legacy Docker Swarm** (being phased out)
 
 ### High-Level Architecture
@@ -49,7 +49,7 @@
                     │                    │                    │
                     ▼                    ▼                    ▼
          ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-         │   mk3 Server     │  │  Orchard Cluster │  │   Barn Server    │
+         │   mk3 Server     │  │  Orchard Cluster │  │   Barn Desktop   │
          │  (Music/FLAC)    │  │   (Kubernetes)   │  │   (Docker Lab)   │
          │ 192.168.1.192    │  │  apple/lemon/    │  │  192.168.1.xxx   │
          │  Alpine Linux    │  │     plum         │  │  Desktop/Docker  │
@@ -69,14 +69,13 @@
 
 ### Layer 1: Physical Hardware
 - ASUS PN50 (mk3 music server)
-- 3x Raspberry Pi 4 (Orchard K3s cluster)
+- GMKtec Nucbox G3 Plus N150 16 GB Ram / 1 TB SSD (Orchard K3s cluster)
 - Desktop PC (Barn experimental server)
 - Fritz!Box router (gateway, DHCP)
 
 ### Layer 2: Operating System
-- **Alpine Linux** (mk3, future standalone servers)
-- **Raspberry Pi OS** (Orchard nodes)
-- **Linux** (Barn server)
+- **Alpine Linux** (Orchard nodes, mk3, future standalone servers)
+- **Ubuntu Linux** (Barn Desktop/ temp Server before Nook migration from Swarm)
 
 ### Layer 3: Container Runtime
 - **Docker + Docker Compose** (mk3, Barn)
@@ -123,11 +122,11 @@
 
 **Nodes:**
 
-| Hostname | Role | IP Address | RAM | Storage |
-|----------|------|------------|-----|---------|
-| **apple** | Control Plane + Worker | `192.168.1.xxx` | 8GB | 64GB SD |
-| **lemon** | Worker | `192.168.1.xxx` | 4GB | 32GB SD |
-| **plum** | Worker | `192.168.1.xxx` | 4GB | 32GB SD |
+| Hostname | Role | IP Address | RAM  | Storage  |
+|----------|------|------------|------|----------|
+| **apple** | Control Plane + Worker | `192.168.1.xxx` | 16GB | 1 TB SSD |
+| **lemon** | Worker | `192.168.1.xxx` | 16GB  | 1 TB SSD  |
+| **plum** | Worker | `192.168.1.xxx` | 16GB  | 1 TB SSD  |
 
 **Purpose:** Multi-node Kubernetes cluster for central homelab services
 
@@ -288,7 +287,7 @@ FLAC files (update tags)
 ├── mk3/                       # Subvolume: Ripped CDs (626GB used)
 ├── io1/                       # Subvolume: Bandcamp purchases
 ├── cl1/                       # Subvolume: Classical music
-└── rs1/                       # Subvolume: Reserved for future
+└── rs1/                       # Subvolume: RS Mag CDs
 ```
 
 **Snapshot Strategy:**
@@ -550,7 +549,7 @@ curl -k https://jellyfin.mk3.homehill.de
 ### Timeline
 
 **2023-2024: Docker Swarm Era**
-- Raspberry Pi + Swarm
+- Mini PCs + Swarm
 - Portainer, Pi-hole, Traefik
 - Flat repository structure
 
@@ -561,7 +560,7 @@ curl -k https://jellyfin.mk3.homehill.de
 - Repository restructure (`servers/`, `clusters/`, `swarm/`)
 
 **2026: Orchard Kubernetes Cluster**
-- K3s on Raspberry Pi (apple, lemon, plum)
+- K3s on N150 / 16 GB (apple, lemon, plum)
 - Swarm → Kubernetes migration
 - GitOps with ArgoCD
 - Monitoring with Prometheus/Grafana
