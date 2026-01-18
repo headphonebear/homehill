@@ -8,6 +8,78 @@ and this project uses date-based versioning (YYYY.MM.DD).
 ## [Unreleased]
 ### Planned
 - Prometheus/Grafana monitoring stack
+- Swarm → Orchard Kubernetes migration
+- S3 backups with restic
+- Tailscale/WireGuard remote access
+
+---
+
+## [2026-01-18] "Documentation Sprint" 📚
+### Added
+- **Core Philosophy Document** (`docs/philosophy.md`)
+  - Consolidates design principles from across the codebase
+  - Covers: Naked OS Brutalism, Elegant Autonomy, Never Stop Running, Documentation-First
+  - Technical values and decision-making frameworks
+  - Cultural elements (music, art deco, community)
+  - Living document for infrastructure philosophy
+
+- **Comprehensive Architecture Guide** (`docs/architecture.md`)
+  - Technical deep dive into complete infrastructure
+  - Hardware specifications (mk3, Orchard, Barn)
+  - Network topology and DNS architecture
+  - Complete service catalog with status
+  - Data flow diagrams (music streaming, metadata enrichment)
+  - Storage architecture (Btrfs, snapshots, backups)
+  - Security model (TLS, authentication, secrets)
+  - Deployment platforms comparison (Compose vs K8s vs Swarm)
+  - Disaster recovery procedures and runbooks
+  - 16.6KB technical reference document
+
+- **Team & Credits Documentation**
+  - `docs/team.md` - Team member profiles (Headphonebear, Ana, Lina)
+  - `docs/credits.md` - Inspirations and acknowledgments
+
+- **Cross-Repository Links**
+  - mk3 toolkit README: Added "Production Deployment" section
+    - Links to homehill/servers/mk3/ deployment
+    - Explains toolkit's real-world usage
+  - homehill mk3 README: Added "Related Tools" section
+    - Links to github.com/headphonebear/mk3 toolkit
+    - Clarifies relationship between code and deployment
+
+### Changed
+- **Root README.md Refactoring** (major cleanup)
+  - Removed detailed service descriptions (moved to dedicated pages)
+  - Removed team member bios (moved to docs/team.md)
+  - Removed extended credits (moved to docs/credits.md)
+  - Added "Services Overview" section with high-level summaries
+  - Added comprehensive "Documentation" section with organized links
+  - Result: Cleaner, more focused entry point (~5.3KB vs previous size)
+  - Updated timestamp and status indicators
+
+- **File Organization**
+  - Moved `homehill_uid_schema.md` → `docs/uid-schema.md`
+  - Moved `restructure-2025.md` → `docs/migration-2025.md`
+  - Moved `CONTRIBUTING.md` → `docs/CONTRIBUTING.md`
+  - All core documentation now in `docs/` directory
+
+- **Orchard Kubernetes Cleanup**
+  - Consolidated `README-de.md` + `README-en.md` → `README.md` (English)
+  - Removed duplicate German documentation
+  - Reduced 6 documentation files → 3 files
+  - Updated links in homehill README
+
+### Summary
+- **Documentation Quality:** Consolidated, organized, and cross-referenced
+- **Repository Structure:** Cleaner separation of concerns
+- **User Experience:** Easier navigation and better discoverability
+- **Philosophy Captured:** Core principles now formally documented
+- **Technical Reference:** Complete architecture guide available
+- **Cross-Linking:** Related projects now reference each other
+
+**Contributors:** Ana 🦊 (architecture, organization, philosophy)  
+**Reviewed by:** Headphonebear 🐻  
+**Time Investment:** ~3 hours documentation sprint
 
 ---
 
@@ -124,10 +196,10 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ## [2025-11-27] "Kubernetes Orchard Cluster Init" 🍎
 ### Added
-- **Orchard Kubernetes Cluster** (K3s on Raspberry Pi)
+- **Orchard Kubernetes Cluster** (K3s)
   - Nodes: apple (control plane), lemon, plum (workers)
-  - Initial Alpine Linux installation
-  - Documentation in German and English
+  - Initial setup and installation
+  - Documentation (German and English)
   - GitOps structure setup
 
 ### Changed
@@ -254,6 +326,7 @@ accounts will cluster wide use UIDs from 9000 to 9999.
 - 📚 **Documentation updates**
 - ⚡ **Performance improvements**
 - 🔒 **Security enhancements**
+- 📋 **Documentation sprint**
 
 ---
 
