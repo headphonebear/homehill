@@ -272,6 +272,21 @@ docker volume inspect mk3_postgres-data
 
 ---
 
+## Related Tools
+
+This server uses tools and libraries from the **[mk3 Python Toolkit](https://github.com/headphonebear/mk3)**:
+
+- **FLAC-to-MP3 conversion** with tag preservation
+- **MusicBrainz integration** for metadata enrichment
+- **PostgreSQL catalogs** for collection management
+- **Queue processing** for batch operations
+
+👉 **[View the mk3 Toolkit Repository](https://github.com/headphonebear/mk3)**
+
+*The toolkit provides the backend processing capabilities that power this music server.*
+
+---
+
 ## Credits
 
 **Built with love by:**
