@@ -11,6 +11,139 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-01-15] "Dumbware Project Management" 🎯
+### Added
+- **Dumbkan/Dumbware** project management tool (replaces Planka)
+  - Switched from Planka to full Dumbware setup
+  - Path adjustments and configuration rework
+
+### Removed
+- **Planka** project management tool
+  - Replaced by Dumbware/Dumbkan
+
+---
+
+## [2026-01-14] "Project Management Experiments" 📝
+### Added
+- **Planka** Kanban board tool (Barn server)
+  - URL: `http://planka.barn.homehill.de:3001`
+  - Port 3001 to avoid Grafana conflict (3000)
+
+### Fixed
+- Planka port conflict with Grafana (moved to 3001)
+- Multiple base URL configuration attempts
+
+### Removed
+- Planka (same day - replaced by Dumbkan)
+
+---
+
+## [2026-01-10] "AI Infrastructure Expansion" 🤖
+### Added
+- **Ollama + OpenWebUI** on Radeon GPU server
+  - Local LLM inference with AMD GPU support
+  - OpenWebUI web interface
+  - Network config for Portainer GitOps
+  - Debug logging enabled (`OLLAMA_DEBUG`)
+
+### Removed
+- **Stable Diffusion ROCm** (experimental, removed same day)
+
+### Fixed
+- Ollama configuration and networking
+
+---
+
+## [2026-01-08] "Documentation & Knowledge Base" 📚
+### Added
+- **BookStack** wiki/documentation platform
+  - PostgreSQL backend
+  - Traefik routing
+  - App key generation and DB connection setup
+
+- **Stirling PDF** on Barn server
+  - PDF manipulation tool
+
+### Fixed
+- BookStack database connection details
+- BookStack app key configuration
+- Spelling corrections in configs
+
+---
+
+## [2026-01-07] "Barn Server Setup" 🏚️
+### Added
+- **Barn** server documentation
+  - New standalone server (Desktop running Docker)
+  - README with architecture and purpose
+  - Portainer container overview for all users
+
+---
+
+## [2025-12-28] "Mk3 Music Server Finalization" 🎵
+### Added
+- **Jellyfin direct port access** (8096)
+  - Allows mobile app connectivity without TLS issues
+  - Direct access: `http://192.168.1.192:8096`
+  - Fixes Yatse/Jellyfin Mobile connectivity
+
+### Changed
+- **Repository restructuring**
+  - Created `servers/`, `clusters/`, `swarm/` structure
+  - Moved legacy Swarm services to `swarm/`
+  - Moved Kubernetes to `clusters/orchard/`
+  - Philosophy and architecture documentation
+
+- **README rewrite** (presented by Ana 🦊)
+  - Added design philosophy section
+  - Enhanced visual identity (copper red, deep brown, art deco)
+  - Service descriptions and quick start guide
+
+### Fixed
+- **DragonflyDB snapshot syntax**
+  - Replaced `--save_schedule` with `--snapshot_cron`
+  - Fixes SIGSEGV crash on startup
+  - Cron syntax: `0 * * * *` (hourly)
+
+- **Traefik downgrade** to v2.11
+  - v3.0 had Docker API compatibility issues
+  - v2.11 supports older Docker API versions
+
+- **Self-signed TLS certificates**
+  - Removed Let's Encrypt (no external IP)
+  - Added self-signed cert generation
+  - Updated README with trust instructions
+
+### Added (Mk3 Stack)
+- **Traefik** reverse proxy with self-signed certs
+- **DragonflyDB** (replaces Redis, 25x faster)
+- **mk3 user** configuration (UID/GID 2001:2001)
+- Traefik dashboard: `traefik.mk3.homehill.de`
+
+---
+
+## [2025-11-27] "Kubernetes Orchard Cluster Init" 🍎
+### Added
+- **Orchard Kubernetes Cluster** (K3s on Raspberry Pi)
+  - Nodes: apple (control plane), lemon, plum (workers)
+  - Initial Alpine Linux installation
+  - Documentation in German and English
+  - GitOps structure setup
+
+### Changed
+- Translated and renamed Kubernetes documentation files
+- Sorting and organization improvements
+
+---
+
+## [2025-11-03] "UID Schema Updates" 🔢
+### Changed
+- Added `jellyfin-svc` (UID 7003)
+- Renamed `homeassistant-svc` → `mqtt-svc`
+- Clarified Jellyfin ownership model in UID schema
+
+---
+
 ## [2025-10-27] Memos Service 📝
 ### Added
 - Memos (self-hosted Notiz-/Journalsystem) mit PostgreSQL-Backend und Traefik-Routing  
