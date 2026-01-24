@@ -1,0 +1,29 @@
+# LEAN & MEAN ArgoCD for Homehill
+# No Redis, no overcomplexity, just GitOps magic!
+
+global:
+  domain: argocd.homehill.de
+
+redis:
+  enabled: false  # 🥚 NO Redis! In-memory cache is fine!
+
+server:
+  replicas: 1
+  insecure: true
+  
+  service:
+    type: ClusterIP
+    port: 80
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+dex:
+  enabled: false
+
+configs:
+  cm:
+    application.instanceLabelKey: argocd.argoproj.io/instance

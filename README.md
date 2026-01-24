@@ -60,7 +60,7 @@ A carefully crafted listening experience. 626GB of meticulously curated FLAC fil
 **Platform:** K3s on Raspberry Pi (apple, lemon, plum)  
 Future home for central Homelab services with GitOps-friendly architecture.
 
-👉 **See [`clusters/orchard/manifests/orchard/README.md`](clusters/orchard/manifests/orchard/README.md) for details**
+👉 **See [`clusters/orchard/manifests/orchard/README.md`](clusters/orchard/README.md) for details**
 
 ### Legacy Swarm
 **Status:** Being phased out (Q1-Q2 2026)  
@@ -99,7 +99,7 @@ Docker Swarm services scheduled for migration to Orchard or standalone servers.
 
 ### Infrastructure Details
 - **mk3 Server**: [`servers/mk3/README.md`](servers/mk3/README.md) - Deployment guide
-- **Orchard Cluster**: [`clusters/orchard/manifests/orchard/README.md`](clusters/orchard/manifests/orchard/README.md) - Setup & architecture
+- **Orchard Cluster**: [`clusters/orchard/manifests/orchard/README.md`](clusters/orchard/README.md) - Setup & architecture
 - **UID Schema**: [`docs/uid-schema.md`](docs/uid-schema.md) - User and service identity
 
 ### About Us

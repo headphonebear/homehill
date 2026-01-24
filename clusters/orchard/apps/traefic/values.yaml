@@ -1,0 +1,33 @@
+api:
+  dashboard: true
+  debug: false
+deployment:
+  replicas: 2
+image:
+  repository: traefik
+  tag: v3.6.7
+logs:
+  access:
+    enabled: true
+  general:
+    level: INFO
+ports:
+  traefik:
+    expose:
+      default: true
+    port: 9000
+  web:
+    expose:
+      default: true
+    port: 80
+  websecure:
+    expose:
+      default: true
+    port: 443
+providers:
+  kubernetesCRD:
+    enabled: true
+  kubernetesIngress:
+    enabled: true
+service:
+  type: LoadBalancer
