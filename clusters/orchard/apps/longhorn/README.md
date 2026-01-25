@@ -13,4 +13,4 @@ GitOps-managed via ArgoCD.
 - Sync: All resources healthy ✅
 - Post-Sync: Upgrade finalization ✅
 
-## Next: Backup Policy (separate ticket)
+## Next: Backup Policy (separate ticket!)
