@@ -1,0 +1,37 @@
+---
+# ClusterIssuer für Let's Encrypt Production
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@homehill.de
+    privateKeySecretRef:
+      name: letsencrypt-key-prod
+    solvers:
+      - dns01:
+          webhook:
+            groupName: acme.homehill.de
+            solverName: hetzner
+            config:
+              secretName: hetzner-dns-token
+              zoneName: homehill.de
+
+---
+# Test Certificate (Wildcard für *.homehill.de)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homehill-wildcard
+  namespace: default
+spec:
+  secretName: homehill-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.homehill.de"
+  dnsNames:
+    - "*.homehill.de"
+    - homehill.de
