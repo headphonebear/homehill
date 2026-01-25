@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-webhook-hetzner
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.uswitch.com
+    targetRevision: 1.3.0
+    chart: cert-manager-webhook-hetzner
+    helm:
+      values: |
+        groupName: acme.myiri.de
+        secretRef:
+          name: hetzner-dns-token
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
