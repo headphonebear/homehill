@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sealed-secrets
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://sealed-secrets.github.io/sealed-secrets
+    targetRevision: v0.27.0
+    chart: sealed-secrets
+    helm:
+      values: |
+        namespace: kube-system
+        commandArgs:
+          - --update-status=true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
