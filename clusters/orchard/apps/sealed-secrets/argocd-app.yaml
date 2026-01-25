@@ -6,12 +6,11 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://sealed-secrets.github.io/sealed-secrets
-    targetRevision: v0.27.0
+    repoURL: https://bitnami-labs.github.io/sealed-secrets
+    targetRevision: 2.16.2
     chart: sealed-secrets
     helm:
       values: |
-        namespace: kube-system
         commandArgs:
           - --update-status=true
   destination:
