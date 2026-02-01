@@ -12,7 +12,7 @@ spec:
     solvers:
       - dns01:
           webhook:
-            groupName: dns.hetzner.cloud  # GEÄNDERT!
+            groupName: acme.homehill.de  # NOT dns.hetzner.cloud!
             solverName: hetzner
             config:
               secretName: hetzner-dns-token
