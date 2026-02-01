@@ -1,11 +1,15 @@
 # LEAN & MEAN ArgoCD for Homehill
-# No Redis, no overcomplexity, just GitOps magic!
+# Update: Turns out Redis is NOT optional. Who knew? 🤷
+# (Ana & Bear learned this the hard way - 2026-02-01)
 
 global:
   domain: argocd.homehill.de
 
 redis:
-  enabled: false  # 🥚 NO Redis! In-memory cache is fine!
+  enabled: true  # ✅ Redis ist doch nötig für caching!
+
+redis-ha:
+  enabled: false  # High-availability Redis brauchen wir nicht (Homelab!)
 
 server:
   replicas: 1
