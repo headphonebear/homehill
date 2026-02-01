@@ -12,12 +12,12 @@ spec:
     solvers:
       - dns01:
           webhook:
-            groupName: acme.homehill.de  # NOT dns.hetzner.cloud!
             solverName: hetzner
+            groupName: acme.hetzner.com
             config:
-              secretName: hetzner-dns-token
-              zoneName: homehill.de
-
+              tokenSecretKeyRef:
+                name: hetzner
+                key: token
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
