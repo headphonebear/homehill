@@ -18,6 +18,7 @@ spec:
             config:
               secretName: hetzner-dns-token
               zoneName: homehill.de
+              apiUrl: https://dns.hetzner.com/api/v1
 
 ---
 # Test Certificate (Wildcard für *.homehill.de)
