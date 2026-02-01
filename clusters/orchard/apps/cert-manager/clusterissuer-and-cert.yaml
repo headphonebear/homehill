@@ -18,6 +18,7 @@ spec:
               tokenSecretKeyRef:
                 name: hetzner
                 key: token
+
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
