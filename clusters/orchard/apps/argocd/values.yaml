@@ -6,10 +6,10 @@ global:
   domain: argocd.homehill.de
 
 redis:
-  enabled: true  # ✅ Redis ist doch nötig für caching!
+  enabled: true  # ✅ Redis is indeed needed caching!
 
 redis-ha:
-  enabled: false  # High-availability Redis brauchen wir nicht (Homelab!)
+  enabled: false  # High-availability we don't need (Homelab!)
 
 server:
   replicas: 1
