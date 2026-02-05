@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homehill-wildcard
+  namespace: argocd
+spec:
+  secretName: homehill-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.homehill.de"
+  dnsNames:
+    - "*.homehill.de"
+    - homehill.de
