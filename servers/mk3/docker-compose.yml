@@ -49,6 +49,7 @@ services:
       - /srv/music/mk3:/music/mk3:ro
       - /srv/music/io1:/music/io1:ro
       - /srv/music/cl1:/music/cl1:ro
+      - /srv/music/sg1:/music/sg1:ro
     ports:
       - "8096:8096"  # Direct access for mobile apps
     labels:
@@ -80,6 +81,7 @@ services:
       - /srv/music/mk3:/music/mk3:ro
       - /srv/music/io1:/music/io1:ro
       - /srv/music/cl1:/music/cl1:ro
+      - /srv/music/sg1:/music/sg1:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.navidrome.rule=Host(`navidrome.mk3.homehill.de`)"
