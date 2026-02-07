@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik-extras
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/orchard/apps/traefik-extras
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
