@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-postgres
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  numberOfReplicas: "2"  # für dein 3-Node-Setup
+  dataLocality: "strict-local"  # wichtig!
+  staleReplicaTimeout: "30"
+  fsType: "ext4"
