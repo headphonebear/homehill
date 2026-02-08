@@ -145,6 +145,7 @@ sudo update-ca-certificates
      - `/music/mk3` (Ripped CDs)
      - `/music/io1` (Bandcamp)
      - `/music/cl1` (Classical)
+     - `/music/sg1` (Singles)
    - Let it scan (this takes time for 626GB!)
 
 2. **Access Navidrome**: `https://navidrome.mk3.homehill.de`
@@ -165,6 +166,7 @@ sudo update-ca-certificates
 ├── mk3/                       # Subvolume: Ripped CDs (~626GB used)
 ├── io1/                       # Subvolume: Bandcamp purchases
 ├── cl1/                       # Subvolume: Classical music
+├── sg1/                       # Subvolume: Singles
 └── rs1/                       # Subvolume: Reserved for future use
 ```
 
