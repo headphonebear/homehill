@@ -1,0 +1,22 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: my-postgres-cluster
+spec:
+  instances: 2  # 1 primary + 1 replica
+
+  storage:
+    storageClass: longhorn-postgres
+    size: 50Gi
+
+  walStorage:  # WAL separat (Best Practice)
+    storageClass: longhorn-postgres
+    size: 10Gi
+
+  affinity:
+    podAntiAffinityType: required
+
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://your-bucket/backups
+
