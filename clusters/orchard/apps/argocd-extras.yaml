@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/headphonebear/homehill.git
     targetRevision: main
-    path: clusters/orchard/apps/argocd-extras
+    path: clusters/orchard/apps/argocd
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
