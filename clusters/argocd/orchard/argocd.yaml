@@ -1,0 +1,58 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ ArgoCD Self-Management Application                                        ║
+# ║ ArgoCD manages itself via GitOps - changes to values.yaml auto-deploy     ║
+# ║ IMPORTANT: No finalizer to avoid deadlock when deleting ArgoCD            ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+    # WHY: Generate manifests from the root of the source path
+spec:
+  # WHY: 'default' project - ArgoCD can deploy to any namespace
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: The ArgoCD Helm chart (umbrella chart pattern)                   ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: new_season
+    path: homehill/clusters/apps/argocd/orchard
+    # WHY: This path contains Chart.yaml (with argo-cd dependency) and values.yaml
+
+    helm:
+      releaseName: argocd
+      # WHY: The Helm release will be named 'argocd' in the cluster
+      # You'll see this with 'helm list -n argocd'
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: Deploy into the argocd namespace                            ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY: Automated, but careful with self-management                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      # WHY: Remove resources deleted from Git
+      # If you remove a ConfigMap from values.yaml, it gets deleted
+
+      selfHeal: true
+      # WHY: Revert manual changes to ArgoCD's own configuration
+      # Ensures Git is always the source of truth
+
+    syncOptions:
+      - CreateNamespace=true
+      # WHY: Ensure argocd namespace exists (should already exist from bootstrap)
+
+      - ServerSideApply=true
+      # WHY: Better handling of resource conflicts during self-updates

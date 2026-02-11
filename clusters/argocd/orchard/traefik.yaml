@@ -1,0 +1,68 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Traefik Ingress Controller Application                                    ║
+# ║ Our custom Traefik replaces k3s built-in (which we disabled at install)   ║
+# ║ NAMESPACE: traefik (separate from system components)                      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+    # WHY: Ensures clean deletion of all Traefik resources when this Application is deleted
+    # Without this, orphaned resources might remain in the cluster
+spec:
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: Traefik Helm chart with Homehill-specific values                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: new_season
+    path: homehill/clusters/apps/traefik/orchard
+
+    helm:
+      releaseName: traefik
+      # WHY: Helm release name - visible with 'helm list -n traefik'
+
+      skipCrds: true
+      # WHY: Traefik CRDs are managed separately (usually via a traefik-crds chart)
+      # This prevents conflicts and allows independent CRD versioning
+      # TODO: Create separate traefik-crds Application if needed
+
+      valueFiles:
+        - values.yaml
+        # WHY: Load custom values from the repo
+        # This is where we configure LoadBalancer IPs, TLS, dashboards, etc.
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: Deploy into dedicated traefik namespace                     ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+    # WHY: Separate namespace for Traefik keeps it isolated from other components
+    # Makes RBAC and resource management cleaner
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY: Automated with careful deletion handling                    ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      # WHY: Remove old IngressRoutes, Middlewares, etc. when deleted from Git
+
+      selfHeal: true
+      # WHY: Revert manual changes (e.g., someone edits a Service via kubectl)
+
+    syncOptions:
+      - CreateNamespace=true
+      # WHY: Create 'traefik' namespace if it doesn't exist
+
+      - ServerSideApply=true
+      # WHY: Better conflict resolution for Service and Deployment updates

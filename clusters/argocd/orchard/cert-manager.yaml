@@ -1,0 +1,55 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ cert-manager Application                                                  ║
+# ║ Automated TLS certificate management via Let's Encrypt                    ║
+# ║ INCLUDES: Hetzner DNS webhook for DNS-01 challenges (for *.homehill.de)   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: cert-manager Helm chart + Hetzner webhook config                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: new_season
+    path: homehill/clusters/apps/cert-manager/orchard
+    # WHY: This path will contain:
+    # - Chart.yaml (with cert-manager + hetzner-webhook dependencies)
+    # - values.yaml (ClusterIssuers for staging/prod, webhook config)
+
+    helm:
+      releaseName: cert-manager
+
+      valueFiles:
+        - values.yaml
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: cert-manager namespace (standard convention)                ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+    # WHY: Standard namespace for cert-manager
+    # Keeps certificate management isolated and easy to debug
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY                                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

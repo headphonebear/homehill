@@ -1,0 +1,55 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Monitoring Stack Application (kube-prometheus-stack)                      ║
+# ║ Includes: Prometheus, Grafana, Alertmanager, and exporters                ║
+# ║ PURPOSE: Observe cluster health, resource usage, and app metrics          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: kube-prometheus-stack Helm chart                                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: new_season
+    path: homehill/clusters/apps/monitoring/orchard
+    # WHY: This path will contain:
+    # - Chart.yaml (with kube-prometheus-stack dependency)
+    # - values.yaml (Grafana dashboards, Prometheus retention, scrape configs)
+
+    helm:
+      releaseName: monitoring
+
+      valueFiles:
+        - values.yaml
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: monitoring namespace                                        ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+    # WHY: Dedicated namespace for all monitoring components
+    # Makes it easy to track resource usage of the monitoring stack itself
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY                                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

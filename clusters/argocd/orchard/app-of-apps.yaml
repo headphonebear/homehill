@@ -1,0 +1,64 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ App-of-Apps for Orchard Cluster                                           ║
+# ║ This is the master Application that manages all other Applications        ║
+# ║ PATTERN: Points to this directory, finds all *.yaml files, deploys them   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-of-apps
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+    # WHY: Tells ArgoCD to generate manifests from the root of this path
+spec:
+  # WHY: 'default' project allows deployment to any namespace
+  # Can be restricted later with custom AppProjects for security
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: Where to find the Application manifests                          ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    # WHY: Public repo, HTTPS clone, no authentication needed
+
+    targetRevision: new_season
+    # WHY: We're building the new cluster on the new_season branch
+    # Once stable, this will be merged to main
+
+    path: homehill/clusters/argocd/orchard
+    # WHY: This directory contains all Application manifests (including this one!)
+    # ArgoCD will recursively find and deploy all *.yaml files here
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: Where to deploy these Applications                          ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    # WHY: This is the in-cluster API server (the cluster ArgoCD is running in)
+
+    namespace: argocd
+    # WHY: All Application resources live in the argocd namespace
+    # The actual workloads they manage go to their respective namespaces
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY: Automated GitOps - Git is the source of truth               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      # WHY: Automatically delete Applications removed from Git
+      # If you delete traefik.yaml from Git, ArgoCD removes the Traefik Application
+
+      selfHeal: true
+      # WHY: Automatically revert manual changes
+      # If someone does 'kubectl edit application traefik', ArgoCD reverts it to Git state
+
+    syncOptions:
+      - CreateNamespace=true
+      # WHY: Create the argocd namespace if it doesn't exist (shouldn't happen, but safe)
+
+      - ServerSideApply=true
+      # WHY: Use server-side apply for better conflict resolution

@@ -1,0 +1,55 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Longhorn Storage System Application                                       ║
+# ║ Distributed block storage for persistent volumes across apple/lemon/plum  ║
+# ║ REPLACES: k3s local-path-provisioner (which is single-node only)          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: storage
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: Longhorn Helm chart                                              ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: new_season
+    path: homehill/clusters/apps/storage/orchard
+    # WHY: This path will contain:
+    # - Chart.yaml (with longhorn dependency)
+    # - values.yaml (replica counts, backup targets, UI access, etc.)
+
+    helm:
+      releaseName: longhorn
+
+      valueFiles:
+        - values.yaml
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: longhorn-system namespace (Longhorn standard)               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+    # WHY: Standard namespace for Longhorn
+    # All Longhorn components (manager, driver, UI) live here
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY                                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
