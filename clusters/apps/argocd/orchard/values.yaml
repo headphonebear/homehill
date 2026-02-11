@@ -1,0 +1,225 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ ArgoCD Orchard Configuration - Homehill Edition                            ║
+# ║ Based on ArgoCD Helm Chart v9.4.1 (ArgoCD v3.2.5)                          ║
+# ║                                                                            ║
+# ║ IMPORTANT NOTES:                                                           ║
+# ║ - This config is for the PUBLIC homehill repo (no SSH keys needed)         ║
+# ║ - Domain: argocd.orchard.homehill.de (with real DNS + LetsEncrypt)         ║
+# ║ - Ingress disabled initially (access via port-forward during bootstrap)    ║
+# ║ - Traefik ingress will be added later via ArgoCD itself                    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Namespace Override                                                         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# CRITICAL: Tell the chart to deploy into 'argocd' namespace
+# WHY: Ensures all ArgoCD components (server, controller, repo-server) land in argocd NS
+# Without this, Helm v9.4.1 defaults to 'default' namespace
+namespaceOverride: "argocd"
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Global Configuration                                                       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+global:
+  domain: 'argocd.orchard.homehill.de'
+  # WHY: This domain will be used for ArgoCD Ingress (later via Traefik)
+  # This is a real domain with DNS pointing to the Orchard cluster
+
+  securityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+  # WHY: Pod-level security context for ALL ArgoCD components
+  # This ensures:
+  # 1. Pods run as argocd user (uid=999, gid=999)
+  # 2. Any mounted volumes inherit fsGroup ownership
+  # 3. Future SSH keys (if needed) will be readable by the argocd user
+
+cert-manager:
+  letsencrypt:
+    environment: "staging"
+    # WHY: Start with staging certificates to avoid rate limits
+    # Once everything works, switch to "prod" for trusted certificates
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Main ArgoCD Chart Configuration (everything under argo-cd)                 ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+argo-cd:
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ ArgoCD Core Configuration (via ConfigMap)                              ║
+  # ║ Helm renders this into the argocd-cm ConfigMap                         ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  configs:
+    cm:
+      # WHY: This tells ArgoCD where to find the Git repository for syncing
+      # The homehill repo is PUBLIC, so no authentication is needed
+      # ArgoCD will clone via HTTPS without credentials
+      repositories: |
+        - url: https://github.com/headphonebear/homehill.git
+          type: git
+          name: homehill
+
+      # WHY: Set reconciliation timeout to 60s (default is 180s)
+      # Prevents "Unknown" status for repos with many resources
+      timeout.reconciliation: 60s
+
+      # WHY: Server URL - used in notifications, links, CLI login, etc.
+      # This should match the actual URL users will access ArgoCD at
+      url: https://argocd.orchard.homehill.de
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ Redis Configuration                                                    ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  redis:
+    # WHY: Use the built-in Redis for caching and session storage
+    # This is the standard setup for small-to-medium clusters
+    enabled: true
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ Global Parameters (passed to all ArgoCD components)                    ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  params:
+    application.instanceLabelKey: argocd.argoproj.io/instance
+    # WHY: This label is used to track which Application owns which resources
+    # Essential for ArgoCD's garbage collection and pruning
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ CRD Installation                                                       ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  crds:
+    # WHY: Let Helm install ArgoCD CRDs (Application, ApplicationSet, AppProject)
+    # Without these, ArgoCD cannot function - they define the core resource types
+    install: true
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ ArgoCD Server Configuration                                            ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  server:
+    # WHY: Run in secure mode (require HTTPS)
+    # Set to 'true' only if terminating TLS outside ArgoCD (e.g., at Traefik)
+    insecure: false
+
+    service:
+      # WHY: ClusterIP (internal only) - we'll expose via Ingress later
+      # No need for LoadBalancer in a homelab with Traefik handling ingress
+      type: ClusterIP
+
+    ingress:
+      # WHY: Disabled during bootstrap - we access ArgoCD via port-forward first
+      # Once ArgoCD is managing itself, we'll add a Traefik IngressRoute via GitOps
+      enabled: false
+      # TODO: Enable later with Traefik configuration
+      # className: "traefik"
+      # annotations:
+      #   cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      # hosts:
+      #   - "argocd.orchard.homehill.de"
+      # tls:
+      #   - secretName: argocd-server-tls
+      #     hosts:
+      #       - "argocd.orchard.homehill.de"
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ ArgoCD Controller Configuration                                        ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  controller:
+    # WHY: Single replica for now (homelab setup)
+    # Can be scaled to 3+ for HA in production scenarios
+    replicas: 1
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ Repo Server Configuration                                              ║
+  # ║ This component clones Git repos and generates manifests                ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  repoServer:
+    # ┌────────────────────────────────────────────────────────────────────────┐
+    # │ SSH KEY VOLUMES - NOT NEEDED for public repos                          │
+    # │ Kept here as documentation in case private repos are added later       │
+    # └────────────────────────────────────────────────────────────────────────┘
+
+    # volumes:
+    #   - name: github-ssh
+    #     secret:
+    #       secretName: github-ssh
+    #       defaultMode: 0400
+    #       items:
+    #         - key: sshPrivateKey
+    #           path: id_ed25519
+    #           mode: 0400
+
+    # volumeMounts:
+    #   - name: github-ssh
+    #     mountPath: /home/argocd/.ssh
+    #     readOnly: true
+
+    # WHY: Resource requests/limits ensure fair resource sharing on the cluster
+    # Prevents repo-server from consuming all node resources during large syncs
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ Application Controller Settings                                        ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  applicationController:
+    # WHY: Enable Prometheus metrics for monitoring ArgoCD health
+    # Disable rules (alerting) for now - add later when we have Prometheus/Grafana
+    metrics:
+      enabled: true
+      rules:
+        enabled: false
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ RBAC Configuration                                                     ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  rbac:
+    # WHY: Enable RBAC to control access to ArgoCD resources
+    create: true
+
+    # WHY: Default policy - users not explicitly granted permissions get readonly
+    # This is a safe default for multi-user environments
+    policyDefault: "role:readonly"
+
+    # WHY: Define admin role with full access
+    # The admin user (created at install) gets this role automatically
+    policyRules:
+      - p, role:admin, applications, *, */*, allow
+      - p, role:admin, accounts, *, *, allow
+      - p, role:admin, repositories, *, *, allow
+      - p, role:admin, clusters, *, *, allow
+      - p, role:admin, projects, *, *, allow
+
+  # ╔────────────────────────────────────────────────────────────────────────╗
+  # ║ Notification & Webhook Settings                                        ║
+  # ╚────────────────────────────────────────────────────────────────────────╝
+
+  notifications:
+    # WHY: Disabled for now - can be enabled later for Slack/Discord/email alerts
+    # When enabled, ArgoCD can notify on sync failures, health changes, etc.
+    enabled: false
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ NOTES FOR FUTURE ENHANCEMENTS                                              ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# TODO: Add Traefik IngressRoute once Traefik is deployed via ArgoCD
+# TODO: Switch cert-manager to "prod" environment after testing
+# TODO: Enable notifications once monitoring stack (ntfy/Slack) is ready
+# TODO: Add ApplicationSet for automated app generation
+# TODO: Consider enabling argocd-image-updater for automated image updates
