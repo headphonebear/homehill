@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - cert-manager/argocd-app.yaml
+  - cert-manager-webhook/argocd-app.yaml
+  - sealed-secrets/argocd-app.yaml
+  - traefik/extras-app.yaml
+  - longhorn/argocd-app.yaml
+  - cloudnative-pg/argocd-app.yaml
