@@ -1,0 +1,185 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ cert-manager Configuration for Orchard Cluster                            ║
+# ║ PURPOSE: Automated TLS certificate issuance and renewal via Let's Encrypt ║
+# ║ FEATURES: HTTP-01 and DNS-01 challenges (DNS-01 via Hetzner webhook)      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Main cert-manager Configuration                                           ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+cert-manager:
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ CRD Installation                                                         ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  crds:
+    enabled: true
+    # WHY: Install cert-manager Custom Resource Definitions
+    # These define: Certificate, ClusterIssuer, Issuer, CertificateRequest, etc.
+    # Without these CRDs, cert-manager cannot function
+    # They allow you to declare certificates as Kubernetes resources
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ cert-manager Controller Arguments                                        ║
+  # ╚──────────────────────────────────────────────────────────────────────────╗
+
+  extraArgs:
+    # WHY: Use public DNS servers for HTTP-01 challenge validation checks
+    # Problem: If cert-manager uses cluster DNS, it might hit internal load balancers
+    #          which don't respond correctly to Let's Encrypt validation requests
+    # Solution: Force cert-manager to use public DNS (Cloudflare, Google, Quad9)
+    #          to verify that the HTTP-01 challenge is publicly reachable
+    # Reference: https://cert-manager.io/docs/configuration/acme/http01/#setting-nameservers-for-http-01-solver-propagation-checks
+    - "--acme-http01-solver-nameservers=1.1.1.1:53,8.8.8.8:53,9.9.9.9:53"
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Prometheus Monitoring                                                    ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  prometheus:
+    servicemonitor:
+      enabled: true
+      # WHY: Automatically create ServiceMonitor for Prometheus scraping
+      # Prometheus will collect metrics about:
+      # - Certificate issuance/renewal status
+      # - ACME challenge success/failure rates
+      # - cert-manager controller health
+      # Essential for monitoring certificate expiry and renewal issues
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Resource Limits                                                          ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+      # WHY: cert-manager is lightweight - these are sufficient for homelab
+      # Only spikes during certificate renewals (happens every ~60 days)
+    limits:
+      cpu: 200m
+      memory: 256Mi
+      # WHY: Prevent runaway resource usage during bulk certificate operations
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Webhook Configuration                                                    ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  webhook:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    # WHY: The webhook validates Certificate resources before they're created
+    # Prevents invalid configurations from being submitted to cert-manager
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ CA Injector Configuration                                                ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  cainjector:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    # WHY: CA Injector automatically injects CA bundles into Webhooks and APIServices
+    # Needed for secure communication with the cert-manager webhook
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Global Configuration                                                     ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  global:
+    leaderElection:
+      namespace: cert-manager
+      # WHY: Leader election ensures only one cert-manager controller is active
+      # Important if you scale cert-manager to multiple replicas for HA
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ NOTES & TODO                                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# After cert-manager is deployed, you need to create ClusterIssuers:
+#
+# TODO: Create ClusterIssuer for Let's Encrypt Staging
+#       This is for testing - staging certs are not trusted by browsers
+#       but have higher rate limits (useful for debugging)
+#
+#       apiVersion: cert-manager.io/v1
+#       kind: ClusterIssuer
+#       metadata:
+#         name: letsencrypt-staging
+#       spec:
+#         acme:
+#           server: https://acme-staging-v02.api.letsencrypt.org/directory
+#           email: your-email@homehill.de
+#           privateKeySecretRef:
+#             name: letsencrypt-staging-account
+#           solvers:
+#             - http01:
+#                 ingress:
+#                   class: traefik
+#
+# TODO: Create ClusterIssuer for Let's Encrypt Production
+#       This issues real, trusted certificates
+#       Lower rate limits (50 certs/week per domain)
+#
+#       apiVersion: cert-manager.io/v1
+#       kind: ClusterIssuer
+#       metadata:
+#         name: letsencrypt-prod
+#       spec:
+#         acme:
+#           server: https://acme-v02.api.letsencrypt.org/directory
+#           email: your-email@homehill.de
+#           privateKeySecretRef:
+#             name: letsencrypt-prod-account
+#           solvers:
+#             - http01:
+#                 ingress:
+#                   class: traefik
+#
+# TODO: Install Hetzner DNS webhook as separate Application
+#       This extends cert-manager with DNS-01 challenge support
+#       Needed for wildcard certificates (*.orchard.homehill.de)
+#       Repository: https://github.com/vadimkim/cert-manager-webhook-hetzner
+#
+#       After webhook is installed, add DNS-01 solver to ClusterIssuers:
+#
+#       solvers:
+#         - dns01:
+#             webhook:
+#               groupName: acme.hetzner.com
+#               solverName: hetzner
+#               config:
+#                 secretName: hetzner-dns-credentials
+#                 zoneName: homehill.de
+#                 apiUrl: https://dns.hetzner.com/api/v1
+#
+# TODO: Create a default Certificate for *.orchard.homehill.de
+#       This provides a wildcard cert for all Orchard services
+#
+#       apiVersion: cert-manager.io/v1
+#       kind: Certificate
+#       metadata:
+#         name: orchard-wildcard-tls
+#         namespace: traefik
+#       spec:
+#         secretName: orchard-wildcard-tls
+#         issuerRef:
+#           name: letsencrypt-prod
+#           kind: ClusterIssuer
+#         dnsNames:
+#           - "orchard.homehill.de"
+#           - "*.orchard.homehill.de"
+#
+# IMPORTANT: Start with staging ClusterIssuer first!
+# Test certificate issuance with staging before switching to production
+# This avoids hitting Let's Encrypt rate limits during debugging

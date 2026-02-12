@@ -1,0 +1,238 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Traefik Configuration for Orchard Cluster                                  ║
+# ║ Single Traefik instance exposed via k3s ServiceLB (LoadBalancer)           ║
+# ║ PURPOSE: Ingress controller for all HTTP/HTTPS traffic into the cluster    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Main Traefik Configuration (under 'traefik' key for the dependency)        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+traefik:
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Deployment Configuration                                                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  deployment:
+    kind: DaemonSet
+    # WHY: DaemonSet ensures one Traefik pod runs on EVERY node (apple, lemon, plum)
+    # Benefits:
+    # - High Availability: If one node fails, others still handle traffic
+    # - No scheduling delays: Pod is always ready on each node
+    # - Even load distribution: Each node can accept connections directly
+    # Alternative would be Deployment with replicas=2-3, but DaemonSet is simpler for 3-node clusters
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ IngressClass Configuration                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  ingressClass:
+    enabled: true
+    isDefaultClass: true
+    # WHY: Makes this the default IngressClass for the cluster
+    # When you create an Ingress without specifying ingressClassName, it uses this one
+
+    name: traefik
+    # WHY: Standard name - when creating IngressRoutes, you reference this class
+    # Example: ingressClassName: traefik
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Service Configuration                                                    ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  service:
+    enabled: true
+    type: LoadBalancer
+    # WHY: k3s has built-in ServiceLB (replaces MetalLB)
+    # ServiceLB automatically:
+    # - Assigns the service to all node IPs
+    # - Exposes ports 80 and 443 on every node
+    # - Balances traffic across DaemonSet pods
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Ports Configuration                                                      ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  ports:
+    web:
+      # WHY: HTTP entrypoint (port 80)
+      # Typically redirects to HTTPS, but useful for Let's Encrypt HTTP-01 challenges
+      port: 8000
+      # WHY: Internal container port (Traefik listens on 8000 inside the pod)
+      exposedPort: 80
+      # WHY: External port exposed via LoadBalancer (standard HTTP)
+      expose:
+        default: true
+      protocol: TCP
+
+    websecure:
+      # WHY: HTTPS entrypoint (port 443)
+      # Main entrypoint for all secure traffic
+      port: 8443
+      # WHY: Internal container port
+      exposedPort: 443
+      # WHY: External port exposed via LoadBalancer (standard HTTPS)
+      expose:
+        default: true
+      protocol: TCP
+      http3:
+        enabled: false
+        # WHY: HTTP/3 (QUIC) support - disabled for now
+        # Can be enabled later for better performance with modern browsers
+        # Requires UDP port 443 to be open
+      tls:
+        enabled: true
+        # WHY: Enable TLS on this entrypoint
+        # Certificates will be provided by cert-manager via Certificate resources
+
+    traefik:
+      # WHY: Traefik dashboard/API port
+      # Used for health checks, metrics, and optionally the web UI
+      port: 9000
+      expose:
+        default: false
+        # WHY: Not exposed externally by default (security)
+        # Access via 'kubectl port-forward' or create a secure IngressRoute later
+      protocol: TCP
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ TLS Configuration                                                        ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  tlsOptions:
+    default:
+      minVersion: VersionTLS12
+      # WHY: Disable TLS 1.0 and 1.1 (insecure, deprecated)
+      # TLS 1.2 is minimum, TLS 1.3 is preferred
+
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+        # WHY: Modern, secure cipher suites only
+        # Excludes weak ciphers that are vulnerable to attacks
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Logs Configuration                                                       ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  logs:
+    general:
+      level: INFO
+      # WHY: INFO level gives enough detail for troubleshooting without spam
+      # Options: DEBUG, INFO, WARN, ERROR
+      # Use DEBUG only when actively troubleshooting routing issues
+
+    access:
+      enabled: true
+      # WHY: Log all incoming requests (useful for debugging IngressRoutes)
+      # Can be disabled in production if logs become too large
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Metrics & Monitoring                                                     ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  metrics:
+    prometheus:
+      # WHY: Enable Prometheus metrics endpoint
+      # Required for the monitoring stack (kube-prometheus-stack) to scrape Traefik metrics
+      entryPoint: traefik
+      # WHY: Metrics available at http://<pod-ip>:9000/metrics
+
+      serviceMonitor:
+        enabled: true
+        # WHY: Automatically creates a ServiceMonitor resource
+        # This tells Prometheus: "scrape metrics from Traefik pods"
+        # Without this, Prometheus won't discover Traefik's metrics
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Dashboard Configuration                                                  ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  ingressRoute:
+    dashboard:
+      enabled: false
+      # WHY: Disabled by default for security
+      # The Traefik dashboard shows all routes, middlewares, services
+      # TODO: Enable later with authentication via IngressRoute + BasicAuth middleware
+      # Example: Create a separate IngressRoute for dashboard.orchard.homehill.de with auth
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Provider Configuration                                                   ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  providers:
+    kubernetesIngress:
+      enabled: true
+      # WHY: Support standard Kubernetes Ingress resources
+      # Allows using both Ingress and IngressRoute (Traefik CRD)
+      publishedService:
+        enabled: true
+        # WHY: Updates Ingress status with LoadBalancer IP
+        # Shows correct external IP in 'kubectl get ingress'
+
+    kubernetesCRD:
+      enabled: true
+      # WHY: Enable Traefik CRDs (IngressRoute, Middleware, TLSOption, etc.)
+      # This is the recommended way to configure Traefik
+      # More powerful than standard Ingress (supports TCP/UDP, middlewares, etc.)
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Global Arguments                                                         ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  additionalArguments:
+    - "--serverstransport.insecureskipverify=true"
+    # WHY: Allow Traefik to connect to backends with self-signed certificates
+    # Useful for internal services that don't have proper certs yet
+    # WARNING: Only use in homelab, not in production!
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Resource Limits                                                          ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+      # WHY: Minimum resources Traefik needs to start
+      # These are conservative estimates for a homelab
+    limits:
+      cpu: 500m
+      memory: 512Mi
+      # WHY: Maximum resources Traefik can consume
+      # Prevents one pod from starving others on the node
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Traefik CRDs Configuration                                                 ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+traefik-crds:
+  # WHY: This section configures the traefik-crds chart (separate from traefik itself)
+  # CRDs are deployed first, then Traefik can use them
+
+  # No additional configuration needed - the chart just installs the CRDs
+  # CRDs include: IngressRoute, IngressRouteTCP, IngressRouteUDP, Middleware,
+  #               TLSOption, TLSStore, TraefikService, ServersTransport
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ NOTES & TODO                                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# TODO: Create IngressRoute for Traefik dashboard at dashboard.orchard.homehill.de
+#       with BasicAuth middleware for security
+#
+# TODO: Once cert-manager is deployed, create a default TLS certificate for *.orchard.homehill.de
+#       and configure it as default cert in tlsStore
+#
+# TODO: Consider enabling accessLog persistence (via PVC) if you want long-term access logs
+#
+# TODO: Add Middlewares for common patterns:
+#       - redirect-https (force HTTPS)
+#       - security-headers (HSTS, frame options, etc.)
+#       - rate-limiting (protect against abuse)
+#
+# TODO: If exposing services to the internet later, review and harden:
+#       - Remove insecureskipverify
+#       - Enable HTTP/3 (QUIC)
+#       - Add WAF rules via Middlewares

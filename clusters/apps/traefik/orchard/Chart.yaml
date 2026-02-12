@@ -1,0 +1,27 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Traefik Umbrella Chart for Orchard                                         ║
+# ║ Single Traefik instance with CRDs for IngressRoute/Middleware support      ║
+# ║ PATTERN: Umbrella chart wrapping official Traefik chart v39.0.0            ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v2
+name: traefik-orchard
+description: Traefik Ingress Controller for Orchard cluster at Homehill
+type: application
+version: 1.0.0
+appVersion: "3.2.1"
+# WHY: appVersion matches Traefik's actual version (v3.2.1 in chart 39.0.0)
+
+dependencies:
+  - name: traefik
+    repository: https://traefik.github.io/charts
+    version: 39.0.0
+    # WHY: Official Traefik Helm chart
+    # This version includes Traefik v3.2.1 with latest features and security fixes
+
+  - name: traefik-crds
+    repository: https://traefik.github.io/charts
+    version: 1.14.0
+    # WHY: Traefik Custom Resource Definitions (IngressRoute, Middleware, etc.)
+    # Deployed separately to allow independent CRD lifecycle management
+    # If you update Traefik, CRDs can be updated independently without breaking running routes
