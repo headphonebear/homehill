@@ -1,0 +1,27 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Monitoring Stack Umbrella Chart for Orchard                               ║
+# ║ Includes: Prometheus, Grafana, Alertmanager, and various exporters        ║
+# ║ INTEGRATED WITH: VictoriaMetrics for long-term storage                    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v2
+name: monitoring-orchard
+description: Complete monitoring stack with Prometheus, Grafana, and VictoriaMetrics
+type: application
+version: 1.0.0
+appVersion: "68.0.0"
+# WHY: Using kube-prometheus-stack v68.x (Feb 2026)
+# Newer than Tools cluster v66.x because we don't have Angular dashboard dependencies
+
+dependencies:
+  - name: kube-prometheus-stack
+    repository: https://prometheus-community.github.io/helm-charts
+    version: "68.0.3"
+    # WHY: Latest stable version as of Feb 2026
+    # Includes:
+    # - Prometheus Operator (manages Prometheus/Alertmanager instances)
+    # - Prometheus (metrics scraping and short-term storage)
+    # - Grafana v11+ (no more Angular plugins)
+    # - Alertmanager (alerting and notifications)
+    # - Node Exporter (host metrics from each node)
+    # - kube-state-metrics (Kubernetes object metrics)

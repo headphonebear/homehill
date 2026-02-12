@@ -1,0 +1,119 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Sealed Secrets Configuration for Orchard Cluster                          ║
+# ║ PURPOSE: Store encrypted secrets in public Git repos safely               ║
+# ║ HOW IT WORKS:                                                              ║
+# ║ 1. You create a Secret locally (not in Git yet)                           ║
+# ║ 2. Use 'kubeseal' CLI to encrypt it into a SealedSecret                   ║
+# ║ 3. Commit SealedSecret to Git (safe - only this cluster can decrypt)      ║
+# ║ 4. ArgoCD deploys SealedSecret, controller decrypts to real Secret        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Main Sealed Secrets Configuration                                         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+sealed-secrets:
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Metrics & Monitoring                                                     ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  metrics:
+    serviceMonitor:
+      enabled: true
+      # WHY: Create ServiceMonitor for Prometheus scraping
+      # Prometheus will collect metrics about:
+      # - Number of SealedSecrets processed
+      # - Decryption success/failure rates
+      # - Controller health and uptime
+      # Useful for monitoring if secrets are being properly decrypted
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Resource Limits                                                          ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  resources:
+    requests:
+      cpu: "0.1"
+      # WHY: 100m CPU (0.1 cores) - sealed-secrets controller is very lightweight
+      # It only runs when SealedSecrets are created/updated (not constantly active)
+      memory: "128Mi"
+      # WHY: 128 MB RAM - sufficient for decrypting secrets and maintaining state
+
+    limits:
+      cpu: "1"
+      # WHY: Allow bursting up to 1 full CPU core during bulk operations
+      # If you deploy many SealedSecrets at once, controller needs CPU to decrypt them
+      memory: "512Mi"
+      # WHY: 512 MB max - prevents runaway memory usage
+      # Decryption operations are memory-light, so this is very generous
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Controller Configuration                                                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  # WHY: Most controller settings use sane defaults
+  # The controller:
+  # - Watches for SealedSecret resources
+  # - Decrypts them using the cluster's private key
+  # - Creates corresponding Secret resources
+  # - Maintains a single private key (stored in kube-system namespace)
+
+  # Default key rotation: 30 days (controller creates a new key every 30 days)
+  # Old keys are kept for decrypting existing SealedSecrets
+  # WHY: Key rotation limits blast radius if a key is compromised
+
+  # Default namespace scope: strict (SealedSecret can only be decrypted in its original namespace)
+  # WHY: Prevents SealedSecret intended for namespace 'prod' from being decrypted in 'dev'
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ NOTES & TODO                                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# After sealed-secrets is deployed:
+#
+# TODO: Install kubeseal CLI tool on your local machine
+#       Download from: https://github.com/bitnami-labs/sealed-secrets/releases
+#       Or use Homebrew: brew install kubeseal
+#
+# TODO: Fetch the cluster's public key (for encrypting secrets)
+#       Command: kubeseal --fetch-cert --controller-name=sealed-secrets \
+#                  --controller-namespace=kube-system > orchard-pub-cert.pem
+#       Save orchard-pub-cert.pem in a safe place (you'll use it to encrypt secrets)
+#
+# TODO: Create your first SealedSecret
+#       Example workflow:
+#       1. Create a regular Secret (locally, not in Git):
+#          kubectl create secret generic my-secret --dry-run=client --from-literal=password=hunter2 -o yaml > secret.yaml
+#
+#       2. Encrypt it with kubeseal:
+#          kubeseal --format yaml --cert orchard-pub-cert.pem < secret.yaml > sealedsecret.yaml
+#
+#       3. Commit sealedsecret.yaml to Git (safe - encrypted)
+#          git add sealedsecret.yaml && git commit -m "Add my-secret"
+#
+#       4. Deploy via ArgoCD (or kubectl apply -f sealedsecret.yaml)
+#          The controller automatically decrypts it into a real Secret
+#
+# TODO: Backup the sealing key (CRITICAL for disaster recovery)
+#       The private key is stored in kube-system as a Secret named 'sealed-secrets-key*'
+#       Command: kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > sealed-secrets-keys-backup.yaml
+#       Store sealed-secrets-keys-backup.yaml in a SECURE location (password manager, encrypted drive)
+#       WHY: If you lose the cluster and don't have the key backup, you cannot decrypt your SealedSecrets
+#
+# TODO: Consider namespace-scoped vs. cluster-wide SealedSecrets
+#       Default: strict scope (SealedSecret can only be used in its original namespace)
+#       Alternative: cluster-wide scope (annotation: sealedsecrets.bitnami.com/scope: "cluster-wide")
+#       WHY: Strict scope is safer (prevents misuse), cluster-wide is more flexible
+#
+# SECURITY NOTES:
+# - The public key (orchard-pub-cert.pem) can be shared publicly - it only encrypts, cannot decrypt
+# - The private key (in kube-system) must be protected - anyone with it can decrypt ALL SealedSecrets
+# - SealedSecrets in Git are safe even in public repos - they're encrypted with the cluster's public key
+# - If a SealedSecret is compromised, you must:
+#   1. Rotate the actual secret value
+#   2. Re-encrypt with kubeseal (creates new SealedSecret)
+#   3. Update in Git
+#
+# IMPORTANT: kubeseal must target the correct cluster when encrypting
+# Use --controller-name and --controller-namespace flags to ensure you're encrypting for Orchard
+# If you encrypt for the wrong cluster, the SealedSecret cannot be decrypted!

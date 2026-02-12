@@ -1,0 +1,22 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ VictoriaMetrics Umbrella Chart for Orchard                                ║
+# ║ Long-term time-series storage with 10x compression vs Prometheus          ║
+# ║ ARCHITECTURE: Single-node setup (sufficient for homelab)                  ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v2
+name: victoriametrics-orchard
+description: VictoriaMetrics time-series database for long-term metrics storage
+type: application
+version: 1.0.0
+appVersion: "1.107.0"
+# WHY: appVersion matches VictoriaMetrics version in victoria-metrics-single chart
+
+dependencies:
+  - name: victoria-metrics-single
+    repository: https://victoriametrics.github.io/helm-charts
+    version: "0.14.8"
+    # WHY: Official VictoriaMetrics Single-Node Helm chart
+    # Single-node is perfect for homelab (simpler than cluster mode)
+    # Includes: vmselect, vminsert, vmstorage in one binary
+    # Handles millions of samples/second (way more than we need)

@@ -1,0 +1,137 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ VictoriaMetrics Configuration for Orchard Cluster                         ║
+# ║ PURPOSE: Long-term metrics storage with better compression than Prometheus║
+# ║ RETENTION: Unlimited (constrained only by disk space)                     ║
+# ║ COMPRESSION: ~10x better than Prometheus (30 days in ~5GB instead of 50GB)║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+victoria-metrics-single:
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Storage Configuration                                                    ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  server:
+    persistentVolume:
+      enabled: true
+      # WHY: VictoriaMetrics needs persistent storage for long-term retention
+
+      storageClass: "longhorn"
+      # WHY: Use Longhorn for distributed storage across nodes
+      # If one node fails, VictoriaMetrics data is still available
+
+      size: 100Gi
+      # WHY: 100 GB gives us ~1-2 years of retention for homelab workload
+      # Calculation:
+      # - ~20 targets × ~1000 metrics = 20k active series
+      # - ~2-3 GB/month with VictoriaMetrics compression
+      # - 100 GB = ~30-40 months of data
+
+      accessModes:
+        - ReadWriteOnce
+        # WHY: VictoriaMetrics is single-node, doesn't need multi-attach
+
+    # ╔────────────────────────────────────────────────────────────────────────╗
+    # ║ Retention Policy                                                       ║
+    # ╚────────────────────────────────────────────────────────────────────────╝
+
+    retentionPeriod: "12"
+    # WHY: Keep data for 12 months (1 year)
+    # VictoriaMetrics uses format: "1" (months), "1y" (years), "1d" (days)
+    # After 12 months, old data is automatically deleted
+    # You can change this to "24" (2 years) or "0" (unlimited) later
+
+    # ╔────────────────────────────────────────────────────────────────────────╗
+    # ║ Resource Limits                                                        ║
+    # ╚────────────────────────────────────────────────────────────────────────╝
+
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+        # WHY: VictoriaMetrics is very efficient
+        # 512 MB RAM handles ~100k active series easily
+        # For homelab with ~20k series, this is plenty
+      limits:
+        cpu: 2
+        memory: 2Gi
+        # WHY: Allow bursting during compaction and queries
+        # Compaction (merging old data blocks) needs CPU
+        # Complex queries (long time ranges) need RAM
+
+    # ╔────────────────────────────────────────────────────────────────────────╗
+    # ║ Service Configuration                                                  ║
+    # ╚────────────────────────────────────────────────────────────────────────╝
+
+    service:
+      type: ClusterIP
+      # WHY: VictoriaMetrics is only accessed from inside the cluster
+      # - Prometheus remote-writes to it
+      # - Grafana queries it
+      # No need to expose externally
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ ServiceMonitor (for self-monitoring)                                    ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  serviceMonitor:
+    enabled: true
+    # WHY: VictoriaMetrics should monitor itself
+    # Prometheus scrapes VictoriaMetrics metrics:
+    # - Ingestion rate (samples/s)
+    # - Storage size
+    # - Query performance
+    # - Memory usage
+    # These get stored in VictoriaMetrics itself (circular, but useful!)
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Scrape Configuration (optional - we use Prometheus for scraping)        ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  # NOTE: VictoriaMetrics CAN scrape targets directly (like Prometheus)
+  # But we're keeping Prometheus for scraping because:
+  # - Prometheus is already in kube-prometheus-stack
+  # - Prometheus has better alerting rules
+  # - VictoriaMetrics is pure storage backend
+  # 
+  # If you want to remove Prometheus later and only use VictoriaMetrics:
+  # - Enable vmAgent (VictoriaMetrics scraper)
+  # - Migrate scrape configs from Prometheus
+  # - Point Grafana only to VictoriaMetrics
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ NOTES & TODO                                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# TODO: Access VictoriaMetrics UI
+#       VictoriaMetrics has a simple web UI for exploring data
+#       Access via: kubectl port-forward -n monitoring svc/victoriametrics 8428:8428
+#       Then open: http://localhost:8428/vmui
+#       You can run PromQL queries directly in the UI
+
+# TODO: Add VictoriaMetrics as Grafana DataSource
+#       In Grafana:
+#       1. Add Data Source → Prometheus
+#       2. URL: http://victoriametrics-victoria-metrics-single-server.monitoring.svc:8428
+#       3. Name: VictoriaMetrics (Historical)
+#       4. Save & Test
+#       Now you can query historical data beyond Prometheus retention
+
+# TODO: Monitor VictoriaMetrics health in Grafana
+#       Import VictoriaMetrics dashboard from Grafana.com:
+#       Dashboard ID: 10229 (VictoriaMetrics - single)
+#       This shows: ingestion rate, storage usage, query performance
+
+# TODO: Tune retention based on disk usage
+#       Check disk usage: kubectl exec -n monitoring victoriametrics-... -- du -sh /storage
+#       If disk fills up, either:
+#       - Reduce retentionPeriod (e.g., "6" for 6 months)
+#       - Increase PVC size (edit PVC or recreate)
+#       - Delete old data manually: curl -X POST http://victoriametrics:8428/api/v1/admin/tsdb/delete_series
+
+# MIGRATION PATH: If you want to remove Prometheus later
+#       1. Enable vmAgent in this chart (replaces Prometheus scraping)
+#       2. Migrate alerting rules to vmalert (VictoriaMetrics alerting)
+#       3. Remove kube-prometheus-stack
+#       4. Point Grafana only to VictoriaMetrics
+#       Benefits: Simpler stack, less resource usage
+#       Trade-off: Less mature ecosystem than Prometheus

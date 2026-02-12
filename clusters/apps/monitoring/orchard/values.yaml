@@ -1,0 +1,292 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Monitoring Stack Configuration for Orchard Cluster                        ║
+# ║ ARCHITECTURE:                                                              ║
+# ║ - Prometheus: Scrapes all targets, stores 7 days locally                  ║
+# ║ - VictoriaMetrics: Receives all metrics via remoteWrite, stores long-term ║
+# ║ - Grafana: Queries both Prometheus (fast/recent) and VM (historical)      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+kube-prometheus-stack:
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ CRD Installation & Management                                            ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  crds:
+    enabled: true
+    # WHY: Install Prometheus Operator CRDs
+    # These define: Prometheus, Alertmanager, ServiceMonitor, PodMonitor, PrometheusRule, etc.
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Prometheus Configuration                                                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  prometheus:
+    prometheusSpec:
+      # ┌────────────────────────────────────────────────────────────────────────┐
+      # │ Storage Configuration (local, short-term)                              │
+      # └────────────────────────────────────────────────────────────────────────┘
+
+      retention: 7d
+      # WHY: Keep only 7 days locally (instead of 30 days)
+      # Recent data in Prometheus for fast queries
+      # Older data lives in VictoriaMetrics
+
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: longhorn
+            # WHY: Use Longhorn instead of local-path (from Tools cluster)
+            # Longhorn provides HA storage across nodes
+
+            accessModes:
+              - ReadWriteOnce
+              # WHY: Prometheus is single-instance (not HA), doesn't need multi-attach
+
+            resources:
+              requests:
+                storage: 20Gi
+                # WHY: 7 days of metrics for ~20 targets
+                # Much smaller than 50Gi (Tools cluster had 30 days)
+                # Calculation: ~2-3 GB/day × 7 days = ~20 GB
+
+      # ┌────────────────────────────────────────────────────────────────────────┐
+      # │ Remote Write to VictoriaMetrics                                        │
+      # └────────────────────────────────────────────────────────────────────────┘
+
+      remoteWrite:
+        - url: http://victoriametrics-victoria-metrics-single-server.monitoring.svc.cluster.local:8428/api/v1/write
+          # WHY: Send all metrics to VictoriaMetrics for long-term storage
+          # URL format: http://<service-name>.<namespace>.svc.cluster.local:<port>/api/v1/write
+          # This is the standard Prometheus remote_write endpoint
+
+          queueConfig:
+            capacity: 10000
+            # WHY: Buffer up to 10k samples before blocking
+            # If VictoriaMetrics is slow/down, Prometheus queues samples
+
+            maxShards: 10
+            # WHY: Parallel write streams to VictoriaMetrics
+            # More shards = faster writes, but more connections
+
+            minShards: 1
+            # WHY: Start with 1 shard, scale up to 10 if needed
+
+      # ┌────────────────────────────────────────────────────────────────────────┐
+      # │ ServiceMonitor/PodMonitor Selection                                    │
+      # └────────────────────────────────────────────────────────────────────────┘
+
+      serviceMonitorSelectorNilUsesHelmValues: false
+      # WHY: Scrape ALL ServiceMonitors in the cluster, not just Helm-installed ones
+      # This allows apps to define their own ServiceMonitors
+      # Example: Traefik, Longhorn, cert-manager all have ServiceMonitors
+
+      podMonitorSelectorNilUsesHelmValues: false
+      # WHY: Same for PodMonitors (scrape all pods with monitoring annotations)
+
+      ruleSelectorNilUsesHelmValues: false
+      # WHY: Load ALL PrometheusRules (alerting/recording rules)
+
+      probeSelectorNilUsesHelmValues: false
+      # WHY: Monitor ALL Probes (blackbox monitoring)
+
+      # ┌────────────────────────────────────────────────────────────────────────┐
+      # │ Resource Limits                                                        │
+      # └────────────────────────────────────────────────────────────────────────┘
+
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 1500Mi
+          # WHY: Prometheus needs CPU for scraping and querying
+          # 1 CPU + 1.5 GB RAM handles ~20 targets with ~1000 metrics each
+        limits:
+          cpu: 2000m
+          memory: 3Gi
+          # WHY: Allow bursting during complex queries or high cardinality spikes
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Grafana Configuration                                                    ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  grafana:
+    enabled: true
+    # WHY: Grafana is the primary UI for viewing metrics
+
+    adminPassword: "changeme-after-first-login"
+    # WHY: Default admin password for initial login
+    # TODO: Change this immediately after first login!
+    # Or use SealedSecret to store it securely in Git
+
+    persistence:
+      enabled: true
+      storageClassName: longhorn
+      size: 5Gi
+      # WHY: Store Grafana dashboards, settings, and users in persistent storage
+      # 5 GB is plenty (Grafana DB is small, mostly SQLite)
+
+    # ┌────────────────────────────────────────────────────────────────────────┐
+    # │ Data Sources (Prometheus + VictoriaMetrics)                            │
+    # └────────────────────────────────────────────────────────────────────────┘
+
+    additionalDataSources:
+      - name: VictoriaMetrics
+        type: prometheus
+        # WHY: VictoriaMetrics speaks PromQL, so we use Prometheus data source type
+
+        url: http://victoriametrics-victoria-metrics-single-server.monitoring.svc.cluster.local:8428
+        # WHY: Query VictoriaMetrics for historical data (beyond 7 days)
+
+        access: proxy
+        # WHY: Grafana proxies queries (queries go through Grafana backend)
+        # Alternative: direct (browser connects directly to VM)
+
+        isDefault: false
+        # WHY: Prometheus is default (faster for recent data)
+        # Users can manually switch to VictoriaMetrics for old data
+
+        jsonData:
+          timeInterval: "30s"
+          # WHY: Match Prometheus scrape interval
+
+    # Default Prometheus data source is auto-configured by kube-prometheus-stack
+    # It points to: http://prometheus-operated:9090
+
+    # ┌────────────────────────────────────────────────────────────────────────┐
+    # │ Ingress/IngressRoute (optional, for web access)                        │
+    # └────────────────────────────────────────────────────────────────────────┘
+
+    ingress:
+      enabled: false
+      # WHY: Disabled initially - access via kubectl port-forward
+      # TODO: Enable later with IngressRoute + BasicAuth or OAuth
+      # Command: kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
+
+    # ┌────────────────────────────────────────────────────────────────────────┐
+    # │ Resource Limits                                                        │
+    # └────────────────────────────────────────────────────────────────────────┘
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+        # WHY: Grafana is lightweight when idle
+      limits:
+        cpu: 500m
+        memory: 512Mi
+        # WHY: Allow bursting when rendering complex dashboards
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Alertmanager Configuration                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  alertmanager:
+    enabled: false
+    # WHY: Disabled initially (same as Tools cluster)
+    # Alertmanager handles alert routing (email, Slack, PagerDuty, etc.)
+    # TODO: Enable later when you want notifications
+    # You'll need to configure receivers (where alerts go)
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ k3s Control Plane Monitoring (Disabled)                                  ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  # WHY: k3s embeds control plane components in the main k3s binary
+  # They don't run as separate Pods, so Prometheus can't scrape them like in kubeadm
+  # These would work in a kubeadm cluster, but not in k3s
+
+  kubeControllerManager:
+    enabled: false
+    # WHY: k3s controller-manager is embedded, no separate endpoint to scrape
+
+  kubeEtcd:
+    enabled: false
+    # WHY: k3s uses embedded etcd (or SQLite), no separate etcd Pod
+
+  kubeScheduler:
+    enabled: false
+    # WHY: k3s scheduler is embedded, no separate endpoint
+
+  kubeProxy:
+    enabled: false
+    # WHY: k3s doesn't use kube-proxy by default (uses eBPF or iptables internally)
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Prometheus Operator Configuration                                        ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  prometheusOperator:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 200Mi
+        # WHY: Operator watches for ServiceMonitor/PrometheusRule changes
+        # Lightweight, only active when config changes
+      limits:
+        cpu: 500m
+        memory: 500Mi
+
+    configReloaderCpu: 200m
+    # WHY: Config reloader watches for ConfigMap/Secret changes
+    # Triggers Prometheus reload when scrape config changes
+    # Same value as Tools cluster
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ NOTES & TODO                                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# TODO: Access Grafana UI
+#       kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
+#       Open: http://localhost:3000
+#       Login: admin / changeme-after-first-login
+#       IMPORTANT: Change password immediately!
+
+# TODO: Change Grafana admin password
+#       Method 1 (via UI): Settings → Users → admin → Change Password
+#       Method 2 (via SealedSecret):
+#       1. Create Secret with password
+#       2. Encrypt with kubeseal
+#       3. Update values.yaml to reference Secret
+
+# TODO: Import Grafana Dashboards
+#       Recommended dashboards:
+#       - 15759: Kubernetes Views / Global
+#       - 15760: Kubernetes Views / Namespaces
+#       - 15761: Kubernetes Views / Pods
+#       - 13032: Longhorn Overview
+#       - 7249: Traefik 2.x
+#       - 10229: VictoriaMetrics Single
+
+# TODO: Create IngressRoute for Grafana (public access)
+#       Once Traefik is deployed, create IngressRoute:
+#       - Host: grafana.orchard.homehill.de
+#       - TLS: letsencrypt cert
+#       - Middleware: BasicAuth or OAuth (for security)
+
+# TODO: Enable Alertmanager and configure receivers
+#       When you want alert notifications:
+#       1. Set alertmanager.enabled: true
+#       2. Configure alertmanager.config (receivers, routes)
+#       3. Example receivers: email, Slack, Discord, ntfy.sh
+#       4. Test with: kubectl port-forward -n monitoring svc/alertmanager 9093:9093
+
+# TODO: Add custom alerting rules
+#       Create PrometheusRule CRDs for alerts:
+#       - High disk usage on Longhorn volumes
+#       - Certificate expiry warnings (cert-manager)
+#       - Pod crash loops
+#       - Node down alerts
+#       Store rules in Git under: homehill/clusters/apps/monitoring/orchard/rules/
+
+# TODO: Tune Prometheus retention based on usage
+#       Check storage: kubectl exec -n monitoring prometheus-... -- df -h /prometheus
+#       If disk fills up, either:
+#       - Reduce retention: 7d → 5d or 3d
+#       - Increase PVC size
+#       VictoriaMetrics has all historical data anyway!
+
+# PERFORMANCE TIPS:
+# - Prometheus local storage is for SPEED (recent queries)
+# - VictoriaMetrics is for RETENTION (historical queries)
+# - Most dashboards query last 1-24 hours → served from Prometheus (fast)
+# - Historical analysis (weeks/months ago) → served from VictoriaMetrics
+# - Grafana automatically picks the right data source based on time range

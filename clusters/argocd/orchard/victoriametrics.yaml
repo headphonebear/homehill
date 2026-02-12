@@ -1,53 +1,47 @@
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ Monitoring Stack Application (Prometheus + Grafana)                       ║
-# ║ Integrated with VictoriaMetrics for long-term storage                     ║
-# ║ DEPLOYMENT ORDER: Deploy AFTER VictoriaMetrics (sync-wave: 0)             ║
+# ║ VictoriaMetrics Application                                               ║
+# ║ Long-term time-series storage backend for Prometheus                      ║
+# ║ DEPLOYMENT ORDER: Deploy BEFORE monitoring (Prometheus needs it ready)    ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: monitoring
+  name: victoriametrics
   namespace: argocd
   annotations:
     argocd.argoproj.io/manifest-generate-paths: .
-    argocd.argoproj.io/sync-wave: "0"
-    # WHY: Deploy AFTER VictoriaMetrics (which has sync-wave: -1)
-    # Ensures VictoriaMetrics is ready before Prometheus starts remote-writing
+    argocd.argoproj.io/sync-wave: "-1"
+    # WHY: Deploy VictoriaMetrics BEFORE monitoring stack
+    # Prometheus will remote-write to VM immediately after startup
+    # If VM isn't ready, remote-write buffer fills up and samples are dropped
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
 
   # ╔──────────────────────────────────────────────────────────────────────────╗
-  # ║ SOURCE: kube-prometheus-stack Helm chart                                 ║
+  # ║ SOURCE: VictoriaMetrics Helm chart                                       ║
   # ╚──────────────────────────────────────────────────────────────────────────╝
   source:
     repoURL: https://github.com/headphonebear/homehill.git
     targetRevision: new_season
-    path: homehill/clusters/apps/monitoring/orchard
-    # WHY: This path contains:
-    # - Chart.yaml (with kube-prometheus-stack dependency)
-    # - values.yaml (with remoteWrite to VictoriaMetrics configured)
+    path: homehill/clusters/apps/victoriametrics/orchard
 
     helm:
-      releaseName: monitoring
+      releaseName: victoriametrics
 
       valueFiles:
         - values.yaml
 
   # ╔──────────────────────────────────────────────────────────────────────────╗
-  # ║ DESTINATION: monitoring namespace                                        ║
+  # ║ DESTINATION: monitoring namespace (shared with Prometheus/Grafana)       ║
   # ╚──────────────────────────────────────────────────────────────────────────╝
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
-    # WHY: Dedicated namespace for all monitoring components
-    # - Prometheus
-    # - Grafana
-    # - VictoriaMetrics
-    # - Alertmanager (if enabled)
-    # - Various exporters (node-exporter, kube-state-metrics)
+    # WHY: Deploy VictoriaMetrics in same namespace as Prometheus
+    # Simplifies service discovery (Prometheus can reach VM via service name)
 
   # ╔──────────────────────────────────────────────────────────────────────────╗
   # ║ SYNC POLICY                                                               ║

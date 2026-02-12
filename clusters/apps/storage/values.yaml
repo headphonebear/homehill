@@ -1,0 +1,254 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Longhorn Storage Configuration for Orchard Cluster                        ║
+# ║ PURPOSE: Distributed block storage with 3-way replication                 ║
+# ║ NODES: apple (control), lemon (worker), plum (worker)                     ║
+# ║ CAPACITY: ~900 GB per node = ~2.7 TB raw, ~900 GB usable (3x replication) ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Main Longhorn Configuration                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+longhorn:
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Global Settings                                                          ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  persistence:
+    defaultClass: true
+    # WHY: Make Longhorn the default StorageClass for the cluster
+    # When you create a PVC without specifying storageClassName, it uses Longhorn
+    # This replaces k3s's local-path-provisioner as the default
+
+    defaultClassReplicaCount: 3
+    # WHY: Every volume gets 3 replicas (one on each node: apple, lemon, plum)
+    # Benefits:
+    # - High Availability: If one node fails, data is still accessible from other two
+    # - Data Durability: Protects against disk failures
+    # - Performance: Reads can be served from any replica
+    # Trade-off: ~900 GB raw per node = ~300 GB usable per node (3x overhead)
+
+    reclaimPolicy: Delete
+    # WHY: When a PVC is deleted, the volume is also deleted
+    # Alternative: Retain (volume stays even after PVC deletion - for backups)
+    # For homelab: Delete is cleaner (no orphaned volumes)
+
+    defaultDataPath: /var/lib/longhorn
+    # WHY: Where Longhorn stores volume data on each node
+    # This path already exists on your nodes (you showed ls /var/lib/longhorn/)
+    # Longhorn creates subdirectories: replicas/, engine-binaries/, logs/, etc.
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Storage Settings                                                         ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  defaultSettings:
+    # WHY: These are cluster-wide Longhorn settings
+    # They can be changed later via Longhorn UI or kubectl edit settings.longhorn.io
+
+    backupTarget: ""
+    # WHY: No backup target configured initially
+    # TODO: Add S3 backup target later (see TODO section at bottom)
+    # Example: s3://longhorn-backups@us-east-1/orchard-backups
+
+    storageOverProvisioningPercentage: 200
+    # WHY: Allow provisioning up to 200% of available storage
+    # Explanation: Longhorn lets you create volumes totaling more than actual disk space
+    # Example: 900 GB disk, but you can provision 1800 GB of volumes
+    # This works because volumes are thin-provisioned (only used space counts)
+    # Risk: If all volumes fill up simultaneously, you run out of space
+    # For homelab: 200% is safe (you won't fill everything at once)
+
+    storageMinimalAvailablePercentage: 10
+    # WHY: Stop creating new replicas when <10% disk space remains
+    # Prevents completely filling up nodes (which would cause system issues)
+    # 10% of 900 GB = 90 GB reserved per node
+
+    replicaSoftAntiAffinity: "true"
+    # WHY: Try to place replicas on different nodes, but allow same-node if needed
+    # With 3 nodes and 3 replicas, this ensures each replica is on a different node
+    # "Soft" means: prefer different nodes, but same-node is allowed if no other option
+
+    replicaAutoBalance: "best-effort"
+    # WHY: Automatically rebalance replicas across nodes
+    # If you add a new node, Longhorn gradually moves replicas to balance disk usage
+    # Options: disabled, least-effort, best-effort
+    # "best-effort" is aggressive but safe for homelab
+
+    orphanAutoDeletion: "true"
+    # WHY: Automatically delete orphaned replicas (replicas without a parent volume)
+    # Can happen after crashes or failed operations
+    # Keeping orphans wastes disk space
+
+    snapshotMaxCount: 250
+    # WHY: Maximum snapshots per volume before old ones are pruned
+    # Snapshots allow point-in-time recovery but use disk space
+    # 250 is generous for homelab (you probably won't hit this)
+
+    guaranteedEngineManagerCPU: 12
+    # WHY: Reserve 12% CPU for each volume's engine-manager
+    # Engine-manager handles I/O for the volume
+    # Default is 12% (0.12 CPU cores) per engine
+    # With ~10 volumes per node, that's ~1.2 CPU cores reserved
+    # Your nodes have plenty of CPU, so this is fine
+
+    guaranteedReplicaManagerCPU: 12
+
+    v2DataEngine: "false"
+    # WHY: Longhorn v2 Data Engine is experimental (uses SPDK for better performance)
+    # Default: false (use stable v1 engine)
+    # TODO: Consider enabling v2 engine later for performance testing
+
+    kubernetesClusterAutoscalerEnabled: "false"
+    # WHY: We don't use Kubernetes Cluster Autoscaler in homelab
+    # This setting prevents Longhorn from interfering with autoscaler logic
+    # WHY: Reserve 12% CPU for each replica-manager
+    # Replica-manager handles replication and health checks
+    # Same reasoning as engine-manager
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Longhorn UI (Dashboard)                                                  ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  ingress:
+    enabled: false
+    # WHY: Disabled by default for security
+    # The Longhorn UI allows managing volumes, replicas, snapshots, backups
+    # TODO: Enable later with IngressRoute + BasicAuth middleware
+    # Example IngressRoute for longhorn.orchard.homehill.de with authentication
+
+  service:
+    ui:
+      type: ClusterIP
+      # WHY: UI is only accessible inside the cluster (via kubectl port-forward)
+      # Command: kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
+      # Then access at http://localhost:8080
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Monitoring & Metrics                                                     ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  metrics:
+    serviceMonitor:
+      enabled: true
+      # WHY: Create ServiceMonitor for Prometheus scraping
+      # Prometheus will collect metrics about:
+      # - Volume health and capacity
+      # - Replica synchronization status
+      # - I/O performance (read/write IOPS, latency)
+      # - Node storage usage
+      # Essential for monitoring storage health and predicting capacity issues
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Resource Limits                                                          ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  longhornManager:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+        # WHY: Longhorn manager is the control plane (handles API, scheduling, health checks)
+        # Runs on each node as a DaemonSet
+        # 100m CPU + 256Mi RAM is sufficient for homelab workloads
+      limits:
+        cpu: 500m
+        memory: 512Mi
+        # WHY: Prevent runaway resource usage during heavy operations
+    tolerations: []
+    # WHY: Empty tolerations = Longhorn manager runs on all nodes
+    # If you had tainted nodes (e.g., control-plane), you'd add tolerations here
+
+
+  longhornDriver:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+        # WHY: CSI driver plugin (small component for Kubernetes integration)
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+  longhornUI:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+        # WHY: Web UI frontend (only serves static HTML/JS when accessed)
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ Node Selector & Tolerations                                              ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+
+  # WHY: By default, Longhorn runs on ALL nodes (DaemonSet)
+  # If you want to exclude certain nodes (e.g., control-plane-only nodes), use nodeSelector
+  # For your 3-node cluster (apple, lemon, plum), we want Longhorn on all nodes
+  # No custom nodeSelector needed
+
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ NOTES & TODO                                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# TODO: Enable Longhorn UI with secure access
+#       Create IngressRoute with BasicAuth middleware:
+#
+#       apiVersion: traefik.io/v1alpha1
+#       kind: IngressRoute
+#       metadata:
+#         name: longhorn-ui
+#         namespace: longhorn-system
+#       spec:
+#         entryPoints:
+#           - websecure
+#         routes:
+#           - match: Host(`longhorn.orchard.homehill.de`)
+#             kind: Rule
+#             services:
+#               - name: longhorn-frontend
+#                 port: 80
+#             middlewares:
+#               - name: longhorn-auth
+#         tls:
+#           secretName: longhorn-tls
+#
+#       Create BasicAuth middleware (htpasswd format):
+#       kubectl create secret generic longhorn-basic-auth -n longhorn-system \
+#         --from-file=users=htpasswd
+#
+# TODO: Configure S3 backup target for disaster recovery
+#       This allows backing up volumes to external storage (e.g., S3-compatible)
+#       Steps:
+#       1. Create S3 bucket (AWS, Wasabi, Backblaze, MinIO, etc.)
+#       2. Create Secret with S3 credentials:
+#          kubectl create secret generic s3-credentials -n longhorn-system \
+#            --from-literal=AWS_ACCESS_KEY_ID=<key> \
+#            --from-literal=AWS_SECRET_ACCESS_KEY=<secret>
+#       3. Update backupTarget setting:
+#          kubectl edit settings.longhorn.io backup-target -n longhorn-system
+#          # Set value to: s3://<bucket>@<region>/<path>
+#       4. Test backup:
+#          In Longhorn UI: Select a volume → Create Backup
+#
+# TODO: Create recurring backup schedules for critical volumes
+#       RecurringJob CRD allows automated snapshots and backups
+#       Example: Daily snapshots, weekly backups to S3
+#
+# TODO: Monitor Longhorn metrics in Grafana
+#       Import Longhorn dashboard from Grafana.com:
+#       Dashboard ID: 13032 (Longhorn Overview)
+#       This shows: volume health, storage usage, I/O performance
+#
+# TODO: Test disaster recovery scenario
+#       Simulate node failure: kubectl drain lemon
+#       Verify volumes remain accessible (replicas on apple/plum)
+#       Restore drained node and verify replica rebalancing
+#
+# IMPORTANT: Longhorn volumes are NOT encrypted at rest by default
+# If you need encryption, use dm-crypt or encrypt at application level
+# Longhorn encrypts replication traffic by default (since v1.2.0)
