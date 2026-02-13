@@ -108,18 +108,22 @@ victoria-metrics-single:
 #       Then open: http://localhost:8428/vmui
 #       You can run PromQL queries directly in the UI
 
-# TODO: Add VictoriaMetrics as Grafana DataSource
-#       In Grafana:
-#       1. Add Data Source → Prometheus
-#       2. URL: http://victoriametrics-victoria-metrics-single-server.monitoring.svc:8428
-#       3. Name: VictoriaMetrics (Historical)
-#       4. Save & Test
-#       Now you can query historical data beyond Prometheus retention
+# NOTE: VictoriaMetrics DataSource already configured!
+#       The monitoring stack (kube-prometheus-stack) has this pre-configured in:
+#       clusters/apps/monitoring/orchard/values.yaml → grafana.additionalDataSources
+#
+#       After bootstrap, verify in Grafana:
+#       Settings → Data Sources → VictoriaMetrics should exist
+#
+#       Usage:
+#       - Default DataSource (Prometheus): Fast queries for recent data (last 7 days)
+#       - VictoriaMetrics DataSource: Historical queries (beyond 7 days)
 
-# TODO: Monitor VictoriaMetrics health in Grafana
-#       Import VictoriaMetrics dashboard from Grafana.com:
+
+# TODO: Import VictoriaMetrics dashboard (PHASE 2 - together with other dashboards)
+#       NOTE: This is also listed in monitoring/values.yaml POST-BOOTSTRAP tasks
 #       Dashboard ID: 10229 (VictoriaMetrics - single)
-#       This shows: ingestion rate, storage usage, query performance
+#       Shows: ingestion rate, storage usage, query performance, compression ratio
 
 # TODO: Tune retention based on disk usage
 #       Check disk usage: kubectl exec -n monitoring victoriametrics-... -- du -sh /storage
