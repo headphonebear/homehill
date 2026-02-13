@@ -112,10 +112,10 @@ kube-prometheus-stack:
     enabled: true
     # WHY: Grafana is the primary UI for viewing metrics
 
-    adminPassword: "changeme-after-first-login"
-    # WHY: Default admin password for initial login
-    # TODO: Change this immediately after first login!
-    # Or use SealedSecret to store it securely in Git
+    # adminPassword: "changeme-after-first-login"
+    # WHY: Comment out to generate random password
+    # kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 -d
+    # TODO: Use SealedSecret to store it securely in Git
 
     persistence:
       enabled: true

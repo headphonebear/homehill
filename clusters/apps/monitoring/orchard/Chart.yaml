@@ -10,8 +10,7 @@ description: Complete monitoring stack with Prometheus, Grafana, and VictoriaMet
 type: application
 version: 1.0.0
 appVersion: "68.0.0"
-# WHY: Using kube-prometheus-stack v68.x (Feb 2026)
-# Newer than Tools cluster v66.x because we don't have Angular dashboard dependencies
+# WHY: Using newest kube-prometheus-stack v68.x (Feb 2026)
 
 dependencies:
   - name: kube-prometheus-stack
