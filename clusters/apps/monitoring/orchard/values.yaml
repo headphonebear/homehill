@@ -230,45 +230,47 @@ kube-prometheus-stack:
     # Triggers Prometheus reload when scrape config changes
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ NOTES & TODO                                                               ║
+# ║ POST-BOOTSTRAP TASKS                                                       ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
+# PHASE 1: Initial Access & Security (do immediately after bootstrap!)
 # TODO: Access Grafana UI
 #       kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80
 #       Open: http://localhost:3000
-#       Login: admin / changeme-after-first-login
-#       IMPORTANT: Change password immediately!
+#       Login: admin / (get password with kubectl get secret)
 
-# TODO: Change Grafana admin password
-#       Method 1 (via UI): Settings → Users → admin → Change Password
-#       Method 2 (via SealedSecret):
-#       1. Create Secret with password
-#       2. Encrypt with kubeseal
-#       3. Update values.yaml to reference Secret
+# TODO: SECURITY - Change Grafana admin password immediately!
+#       Priority: HIGH (do this before exposing Grafana publicly)
+#       Method 1 (Quick): Via Grafana UI → Settings → Users → admin → Change Password
+#       Method 2 (GitOps): Create SealedSecret with new password, update values.yaml
 
+# PHASE 2: Essential Dashboards (do after login)
 # TODO: Import Grafana Dashboards
-#       Recommended dashboards:
-#       - 15759: Kubernetes Views / Global
-#       - 15760: Kubernetes Views / Namespaces
-#       - 15761: Kubernetes Views / Pods
-#       - 13032: Longhorn Overview
-#       - 7249: Traefik 2.x
-#       - 10229: VictoriaMetrics Single
+#       Priority: HIGH - Essential for cluster monitoring
+#       [ ] 15759: Kubernetes Views / Global (cluster overview)
+#       [ ] 15760: Kubernetes Views / Namespaces (per-namespace resources)
+#       [ ] 15761: Kubernetes Views / Pods (detailed pod metrics)
+#       [ ] 13032: Longhorn Overview (storage health - CRITICAL!)
+#       [ ] 7249: Traefik 2.x (ingress metrics)
+#       [ ] 10229: VictoriaMetrics Single (VM performance)
 
+# PHASE 3: Public Access (after Traefik + cert-manager are stable)
 # TODO: Create IngressRoute for Grafana (public access)
 #       Once Traefik is deployed, create IngressRoute:
 #       - Host: grafana.orchard.homehill.de
 #       - TLS: letsencrypt cert
 #       - Middleware: BasicAuth or OAuth (for security)
 
+# PHASE 4: Alerting (optional, lower priority)
 # TODO: Enable Alertmanager and configure receivers
 #       When you want alert notifications:
-#       1. Set alertmanager.enabled: true
-#       2. Configure alertmanager.config (receivers, routes)
-#       3. Example receivers: email, Slack, Discord, ntfy.sh
-#       4. Test with: kubectl port-forward -n monitoring svc/alertmanager 9093:9093
+##       1. Set alertmanager.enabled: true
+##       2. Configure alertmanager.config (receivers, routes)
+##       3. Example receivers: email, Slack, Discord, ntfy.sh
+##       4. Test with: kubectl port-forward -n monitoring svc/alertmanager 9093:9093
 
 # TODO: Add custom alerting rules
+#       NOTE: Requires Alertmanager to be enabled first (see above)
 #       Create PrometheusRule CRDs for alerts:
 #       - High disk usage on Longhorn volumes
 #       - Certificate expiry warnings (cert-manager)
@@ -276,6 +278,7 @@ kube-prometheus-stack:
 #       - Node down alerts
 #       Store rules in Git under: homehill/clusters/apps/monitoring/orchard/rules/
 
+# ONGOING: Maintenance
 # TODO: Tune Prometheus retention based on usage
 #       Check storage: kubectl exec -n monitoring prometheus-... -- df -h /prometheus
 #       If disk fills up, either:
@@ -289,3 +292,4 @@ kube-prometheus-stack:
 # - Most dashboards query last 1-24 hours → served from Prometheus (fast)
 # - Historical analysis (weeks/months ago) → served from VictoriaMetrics
 # - Grafana automatically picks the right data source based on time range
+
