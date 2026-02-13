@@ -1,0 +1,42 @@
+# WHY: Der Hetzner Webhook braucht Zugriff auf das Secret mit dem API Token.
+# Kubernetes folgt dem Principle of Least Privilege - standardmäßig darf
+# ein Pod KEINE Secrets lesen. Wir geben hier explizit die minimal
+# nötigen Rechte: Secrets lesen (get), aber nicht ändern oder löschen.
+
+---
+# WHY: ClusterRole definiert Permissions cluster-weit (nicht namespace-bound).
+# Wir nutzen ClusterRole statt Role, weil der Webhook aus dem cert-manager
+# Namespace auf Secrets in anderen Namespaces zugreifen können muss.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cert-manager-webhook-hetzner:secret-reader
+  # WHY: Labels helfen bei Debugging und zeigen die Zugehörigkeit
+  labels:
+    app.kubernetes.io/name: cert-manager-webhook-hetzner
+    app.kubernetes.io/component: rbac
+rules:
+  - apiGroups: [""]  # WHY: "" = Core API Group (Secrets, ConfigMaps, Pods, etc.)
+    resources: ["secrets"]
+    verbs: ["get"]  # WHY: Nur lesen, nicht schreiben oder löschen
+
+---
+# WHY: ClusterRoleBinding verbindet die Role mit dem ServiceAccount.
+# Ohne Binding hätte die Role keine Wirkung - erst das Binding aktiviert
+# die Permissions für den konkreten ServiceAccount des Webhooks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cert-manager-webhook-hetzner:secret-reader
+  labels:
+    app.kubernetes.io/name: cert-manager-webhook-hetzner
+    app.kubernetes.io/component: rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cert-manager-webhook-hetzner:secret-reader
+subjects:
+  - kind: ServiceAccount
+    # WHY: Der Webhook läuft unter diesem ServiceAccount (wird vom Helm Chart erstellt)
+    name: cert-manager-webhook-hetzner
+    namespace: cert-manager

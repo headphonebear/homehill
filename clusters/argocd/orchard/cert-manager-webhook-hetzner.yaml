@@ -1,0 +1,76 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ cert-manager Hetzner DNS Webhook Application                              ║
+# ║ DNS-01 Challenge Solver for Let's Encrypt wildcard certificates           ║
+# ║ Enables automatic TLS cert issuance for *.homehill.de                     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# WHY: Separate Application from cert-manager itself because:
+# 1. Independent lifecycle - webhook can be updated without touching cert-manager
+# 2. Clear separation of concerns - base infra vs. DNS provider integration
+# 3. Easier debugging - webhook issues don't affect cert-manager core
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-webhook-hetzner
+  namespace: argocd
+  annotations:
+    # WHY: ArgoCD should regenerate manifests when path changes
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    # WHY: Ensures proper cleanup when Application is deleted
+    # Cascading delete of all webhook resources (Deployment, RBAC, etc.)
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  # WHY: 'default' project is fine for homelab - no need for RBAC complexity
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: Hetzner webhook Helm chart + ClusterIssuer manifests             ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    # WHY: Using your homehill Git repo as single source of truth (GitOps!)
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: new_season
+    # WHY: Path points to the directory we just created with all manifests
+    path: clusters/apps/cert-manager-webhook-hetzner/orchard
+
+    helm:
+      # WHY: Release name should be descriptive and match metadata.name
+      releaseName: cert-manager-webhook-hetzner
+
+      # WHY: values.yaml contains the critical groupName config
+      valueFiles:
+        - values.yaml
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: cert-manager namespace (where cert-manager runs)            ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    # WHY: In-cluster API server - standard for self-managed clusters
+    server: https://kubernetes.default.svc
+    # WHY: Must be same namespace as cert-manager to access its CRDs and APIs
+    namespace: cert-manager
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY: Automated sync with prune & self-heal                       ║
+  # ╚──────────────────────────────────────────────────────────────────────════╝
+  syncPolicy:
+    automated:
+      # WHY: prune=true removes resources that are no longer in Git
+      # Important for cleanup when you delete manifests from repo
+      prune: true
+      # WHY: selfHeal=true auto-reverts manual kubectl changes
+      # Enforces GitOps principle: Git is single source of truth
+      selfHeal: true
+
+    syncOptions:
+      # WHY: CreateNamespace=true ensures cert-manager namespace exists
+      # Prevents chicken-egg problem if namespace isn't created yet
+      - CreateNamespace=true
+
+  # ╔──────────────────────────────────────────────────────────────────────════╗
+  # ║ SYNC WAVES: Deploy AFTER cert-manager itself                             ║
+  # ╚──────────────────────────────────────────────────────────────────────════╝
+  # WHY: No explicit sync wave needed - ArgoCD handles dependency order via health checks
+  # cert-manager Application will be healthy first, then webhook can deploy

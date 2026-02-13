@@ -1,0 +1,46 @@
+# WHY: Ein Certificate ist eine Anfrage an Let's Encrypt: "Bitte gib mir
+  # ein TLS Cert für diese Domains". Cert-manager nutzt den ClusterIssuer,
+  # löst die Challenge, und speichert das fertige Cert als Secret.
+  # Wildcard Certs (*.homehill.de) funktionieren für alle Subdomains!
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  # WHY: Name des Certificate Objekts - beschreibend wählen
+  name: homehill-wildcard
+  # WHY: Certificates sind namespace-bound. Default Namespace ist gut für
+  # cluster-weite Wildcard Certs die von vielen Apps genutzt werden.
+  # Traefik kann Secrets aus anderen Namespaces lesen (mit RBAC).
+  namespace: default
+  labels:
+    app.kubernetes.io/name: cert-manager-webhook-hetzner
+    app.kubernetes.io/component: certificate
+spec:
+  # WHY: Das fertige TLS Cert wird in diesem Secret gespeichert.
+  # Das Secret enthält: tls.crt (Certificate + Chain) und tls.key (Private Key)
+  # Traefik oder andere Ingress Controller können das Secret referenzieren.
+  secretName: homehill-wildcard-tls
+
+  # WHY: Welcher Issuer soll das Cert ausstellen? Unser letsencrypt-prod!
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    # WHY: Group ist wichtig wenn mehrere CRDs mit gleichem Namen existieren
+    group: cert-manager.io
+
+  # WHY: Common Name ist das "Haupt"-Subject des Certs. Wird in der
+  # Certificate Subject Line angezeigt. Meist identisch mit der ersten dnsName.
+  commonName: "*.homehill.de"
+
+  # WHY: DNS Names sind die Subject Alternative Names (SANs) - die Domains
+  # für die das Cert gültig ist. Wildcard (*.homehill.de) matcht alle
+  # Subdomains, aber NICHT die Root Domain (homehill.de) - daher beide!
+  dnsNames:
+    - "*.homehill.de"  # WHY: Matcht foo.homehill.de, bar.homehill.de, etc.
+    - "homehill.de"    # WHY: Matcht die Root Domain
+
+  # WHY: Let's Encrypt Certs sind 90 Tage gültig. Cert-manager erneuert
+  # automatisch 30 Tage vor Ablauf (2/3 der Laufzeit). renewBefore kann
+  # angepasst werden wenn man früher erneuern will.
+  # renewBefore: 720h  # Optional: 30 Tage vor Ablauf (default)

@@ -1,0 +1,21 @@
+# WHY: ArgoCD nutzt Helm Charts als Deployment-Mechanismus. Dies ist ein
+# "Umbrella Chart" - ein leeres Helm Chart das nur dazu dient, unsere
+# Kubernetes Manifests (RBAC, ClusterIssuer, etc.) zu bündeln.
+# Der eigentliche Hetzner Webhook wird als Dependency eingebunden.
+
+apiVersion: v2
+name: cert-manager-webhook-hetzner
+description: Hetzner DNS Webhook for cert-manager with ClusterIssuer setup
+type: application
+version: 1.0.0
+appVersion: "1.3.3"
+
+# WHY: Dependencies definieren externe Helm Charts, die mit installiert werden.
+# Der Hetzner Webhook ist ein fertiges Chart von vadimkim, das den Webhook
+# Controller deployt, der DNS01 Challenges für Let's Encrypt über die
+# Hetzner DNS API lösen kann.
+dependencies:
+  - name: cert-manager-webhook-hetzner
+    version: "1.3.3"
+    repository: https://vadimkim.github.io/cert-manager-webhook-hetzner
+    alias: webhook

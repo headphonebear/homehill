@@ -1,0 +1,17 @@
+# WHY: Helm Values konfigurieren das Webhook Chart. Die wichtigste Einstellung
+# ist die groupName - sie verbindet den Webhook mit dem ClusterIssuer.
+# Wenn cert-manager ein Certificate erstellt, schaut es im ClusterIssuer nach
+# der groupName und findet dann den passenden Webhook-Solver.
+
+webhook:
+  # WHY: Die groupName ist der "Namespace" für DNS01 Solver. Sie muss im
+  # ClusterIssuer exakt gleich geschrieben sein. Wir nutzen acme.homehill.de
+  # statt acme.hetzner.com, weil es unsere Domain ist und wir die Kontrolle
+  # über die Benennung haben wollen.
+  groupName: acme.homehill.de
+
+  # WHY: Cert-manager läuft im cert-manager Namespace, der Webhook muss
+  # dort hin deployed werden, um auf die CRDs zugreifen zu können.
+  certManager:
+    namespace: cert-manager
+    serviceAccountName: cert-manager
