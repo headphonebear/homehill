@@ -22,7 +22,7 @@ spec:
   source:
     repoURL: https://github.com/headphonebear/homehill.git
     targetRevision: new_season
-    path: homehill/clusters/apps/argocd/orchard
+    path: clusters/apps/argocd/orchard
     # WHY: This path contains Chart.yaml (with argo-cd dependency) and values.yaml
 
     helm:
@@ -53,6 +53,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
       # WHY: Ensure argocd namespace exists (should already exist from bootstrap)
-
-      - ServerSideApply=true
-      # WHY: Better handling of resource conflicts during self-updates

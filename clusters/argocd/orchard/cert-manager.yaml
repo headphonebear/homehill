@@ -22,7 +22,7 @@ spec:
   source:
     repoURL: https://github.com/headphonebear/homehill.git
     targetRevision: new_season
-    path: homehill/clusters/apps/cert-manager/orchard
+    path: clusters/apps/cert-manager/orchard
     # WHY: This path will contain:
     # - Chart.yaml (with cert-manager + hetzner-webhook dependencies)
     # - values.yaml (ClusterIssuers for staging/prod, webhook config)
@@ -52,4 +52,4 @@ spec:
 
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+

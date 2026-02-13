@@ -25,7 +25,7 @@ spec:
   source:
     repoURL: https://github.com/headphonebear/homehill.git
     targetRevision: new_season
-    path: homehill/clusters/apps/monitoring/orchard
+    path: clusters/apps/monitoring/orchard
     # WHY: This path contains:
     # - Chart.yaml (with kube-prometheus-stack dependency)
     # - values.yaml (with remoteWrite to VictoriaMetrics configured)
@@ -59,4 +59,4 @@ spec:
 
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+

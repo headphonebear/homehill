@@ -24,7 +24,7 @@ spec:
   source:
     repoURL: https://github.com/headphonebear/homehill.git
     targetRevision: new_season
-    path: homehill/clusters/apps/traefik/orchard
+    path: clusters/apps/traefik/orchard
 
     helm:
       releaseName: traefik
@@ -63,6 +63,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
       # WHY: Create 'traefik' namespace if it doesn't exist
-
-      - ServerSideApply=true
-      # WHY: Better conflict resolution for Service and Deployment updates

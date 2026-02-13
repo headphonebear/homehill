@@ -26,7 +26,7 @@ spec:
   source:
     repoURL: https://github.com/headphonebear/homehill.git
     targetRevision: new_season
-    path: homehill/clusters/apps/victoriametrics/orchard
+    path: clusters/apps/victoriametrics/orchard
 
     helm:
       releaseName: victoriametrics
@@ -53,4 +53,3 @@ spec:
 
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
