@@ -189,66 +189,36 @@ longhorn:
   # For your 3-node cluster (apple, lemon, plum), we want Longhorn on all nodes
   # No custom nodeSelector needed
 
-
-  # ╔──────────────────────────────────────────────────────────────────────────╗
-# ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ NOTES & TODO                                                               ║
-# ╚════════════════════════════════════════════════════════════════════════════╝
-
-# TODO: Enable Longhorn UI with secure access
-#       Create IngressRoute with BasicAuth middleware:
+# # ╔════════════════════════════════════════════════════════════════════════════╗
+## ║ POST-BOOTSTRAP TASKS                                                       ║
+## ╚════════════════════════════════════════════════════════════════════════════╝
 #
-#       apiVersion: traefik.io/v1alpha1
-#       kind: IngressRoute
-#       metadata:
-#         name: longhorn-ui
-#         namespace: longhorn-system
-#       spec:
-#         entryPoints:
-#           - websecure
-#         routes:
-#           - match: Host(`longhorn.orchard.homehill.de`)
-#             kind: Rule
-#             services:
-#               - name: longhorn-frontend
-#                 port: 80
-#             middlewares:
-#               - name: longhorn-auth
-#         tls:
-#           secretName: longhorn-tls
+## PHASE 1: Testing & Validation (do this first!)
+## TODO: Test disaster recovery scenario
+##       Simulate node failure: kubectl drain lemon
+##       Verify volumes remain accessible (replicas on apple/plum)
+##       Restore drained node and verify replica rebalancing
 #
-#       Create BasicAuth middleware (htpasswd format):
-#       kubectl create secret generic longhorn-basic-auth -n longhorn-system \
-#         --from-file=users=htpasswd
+## PHASE 2: Monitoring (after VictoriaMetrics/Grafana are deployed)
+## TODO: Monitor Longhorn metrics in Grafana
+##       Import Longhorn dashboard from Grafana.com:
+##       Dashboard ID: 13032 (Longhorn Overview)
+##       This shows: volume health, storage usage, I/O performance
 #
-# TODO: Configure S3 backup target for disaster recovery
-#       This allows backing up volumes to external storage (e.g., S3-compatible)
-#       Steps:
-#       1. Create S3 bucket (AWS, Wasabi, Backblaze, MinIO, etc.)
-#       2. Create Secret with S3 credentials:
-#          kubectl create secret generic s3-credentials -n longhorn-system \
-#            --from-literal=AWS_ACCESS_KEY_ID=<key> \
-#            --from-literal=AWS_SECRET_ACCESS_KEY=<secret>
-#       3. Update backupTarget setting:
-#          kubectl edit settings.longhorn.io backup-target -n longhorn-system
-#          # Set value to: s3://<bucket>@<region>/<path>
-#       4. Test backup:
-#          In Longhorn UI: Select a volume → Create Backup
+## PHASE 3: Access & UI (after Traefik + cert-manager are stable)
+## TODO: Enable Longhorn UI with secure access
+##       [... existing IngressRoute example ...]
 #
-# TODO: Create recurring backup schedules for critical volumes
-#       RecurringJob CRD allows automated snapshots and backups
-#       Example: Daily snapshots, weekly backups to S3
+## PHASE 4: Disaster Recovery (optional, lower priority)
+## TODO: Configure S3 backup target for disaster recovery
+##       NOTE: Requires external S3-compatible storage (AWS/Wasabi/Backblaze/MinIO)
+##       Alternative: NFS backup target to NAS
+##       [... existing instructions ...]
 #
-# TODO: Monitor Longhorn metrics in Grafana
-#       Import Longhorn dashboard from Grafana.com:
-#       Dashboard ID: 13032 (Longhorn Overview)
-#       This shows: volume health, storage usage, I/O performance
+## TODO: Create recurring backup schedules for critical volumes
+##       NOTE: Requires backup target (PHASE 4) to be configured first
+##       RecurringJob CRD allows automated snapshots and backups
+##       Example: Daily snapshots, weekly backups to S3
 #
-# TODO: Test disaster recovery scenario
-#       Simulate node failure: kubectl drain lemon
-#       Verify volumes remain accessible (replicas on apple/plum)
-#       Restore drained node and verify replica rebalancing
-#
-# IMPORTANT: Longhorn volumes are NOT encrypted at rest by default
-# If you need encryption, use dm-crypt or encrypt at application level
-# Longhorn encrypts replication traffic by default (since v1.2.0)
+## IMPORTANT: Longhorn volumes are NOT encrypted at rest by default
+## [... keep encryption note ...]
