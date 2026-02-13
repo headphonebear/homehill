@@ -66,44 +66,44 @@ sealed-secrets:
   # WHY: Prevents SealedSecret intended for namespace 'prod' from being decrypted in 'dev'
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ NOTES & TODO                                                               ║
+# ║ NOTES & HOWTOs                                                             ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 # After sealed-secrets is deployed:
 #
-# TODO: Install kubeseal CLI tool on your local machine
-#       Download from: https://github.com/bitnami-labs/sealed-secrets/releases
-#       Or use Homebrew: brew install kubeseal
+# HOWTO: Install kubeseal CLI tool on your local machine
+#        Download from: https://github.com/bitnami-labs/sealed-secrets/releases
+#        Or use Homebrew: brew install kubeseal
 #
-# TODO: Fetch the cluster's public key (for encrypting secrets)
-#       Command: kubeseal --fetch-cert --controller-name=sealed-secrets \
-#                  --controller-namespace=kube-system > orchard-pub-cert.pem
-#       Save orchard-pub-cert.pem in a safe place (you'll use it to encrypt secrets)
+# HOWTO: Fetch the cluster's public key (for encrypting secrets)
+#        Command: kubeseal --fetch-cert --controller-name=sealed-secrets \
+#                   --controller-namespace=kube-system > orchard-pub-cert.pem
+#        Save orchard-pub-cert.pem in a safe place (you'll use it to encrypt secrets)
 #
-# TODO: Create your first SealedSecret
-#       Example workflow:
-#       1. Create a regular Secret (locally, not in Git):
-#          kubectl create secret generic my-secret --dry-run=client --from-literal=password=hunter2 -o yaml > secret.yaml
+# HOWTO: Create your first SealedSecret
+#          Example workflow:
+#        1. Create a regular Secret (locally, not in Git):
+#           kubectl create secret generic my-secret --dry-run=client --from-literal=password=hunter2 -o yaml > secret.yaml
 #
-#       2. Encrypt it with kubeseal:
-#          kubeseal --format yaml --cert orchard-pub-cert.pem < secret.yaml > sealedsecret.yaml
+#        2. Encrypt it with kubeseal:
+#           kubeseal --format yaml --cert orchard-pub-cert.pem < secret.yaml > sealedsecret.yaml
 #
-#       3. Commit sealedsecret.yaml to Git (safe - encrypted)
-#          git add sealedsecret.yaml && git commit -m "Add my-secret"
+#        3. Commit sealedsecret.yaml to Git (safe - encrypted)
+#           git add sealedsecret.yaml && git commit -m "Add my-secret"
 #
-#       4. Deploy via ArgoCD (or kubectl apply -f sealedsecret.yaml)
-#          The controller automatically decrypts it into a real Secret
+#        4. Deploy via ArgoCD (or kubectl apply -f sealedsecret.yaml)
+#           The controller automatically decrypts it into a real Secret
 #
-# TODO: Backup the sealing key (CRITICAL for disaster recovery)
-#       The private key is stored in kube-system as a Secret named 'sealed-secrets-key*'
-#       Command: kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > sealed-secrets-keys-backup.yaml
-#       Store sealed-secrets-keys-backup.yaml in a SECURE location (password manager, encrypted drive)
-#       WHY: If you lose the cluster and don't have the key backup, you cannot decrypt your SealedSecrets
+# HOWTO: Backup the sealing key (CRITICAL for disaster recovery)
+#        The private key is stored in kube-system as a Secret named 'sealed-secrets-key*'
+#        Command: kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > sealed-secrets-keys-backup.yaml
+#        Store sealed-secrets-keys-backup.yaml in a SECURE location (password manager, encrypted drive)
+#        WHY: If you lose the cluster and don't have the key backup, you cannot decrypt your SealedSecrets
 #
-# TODO: Consider namespace-scoped vs. cluster-wide SealedSecrets
-#       Default: strict scope (SealedSecret can only be used in its original namespace)
-#       Alternative: cluster-wide scope (annotation: sealedsecrets.bitnami.com/scope: "cluster-wide")
-#       WHY: Strict scope is safer (prevents misuse), cluster-wide is more flexible
+# HOWTO: Consider namespace-scoped vs. cluster-wide SealedSecrets
+#        Default: strict scope (SealedSecret can only be used in its original namespace)
+#        Alternative: cluster-wide scope (annotation: sealedsecrets.bitnami.com/scope: "cluster-wide")
+#        WHY: Strict scope is safer (prevents misuse), cluster-wide is more flexible
 #
 # SECURITY NOTES:
 # - The public key (orchard-pub-cert.pem) can be shared publicly - it only encrypts, cannot decrypt
