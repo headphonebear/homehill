@@ -222,17 +222,54 @@ traefik-crds:
 # TODO: Create IngressRoute for Traefik dashboard at dashboard.orchard.homehill.de
 #       with BasicAuth middleware for security
 #
-# TODO: Once cert-manager is deployed, create a default TLS certificate for *.orchard.homehill.de
-#       and configure it as default cert in tlsStore
+# TODO: Configure wildcard certificate as default TLS cert (after cert-manager issues it)
+#       Once the homehill-wildcard certificate is issued, configure it as default:
+#       Add to tlsStore configuration:
 #
-# TODO: Consider enabling accessLog persistence (via PVC) if you want long-term access logs
+#       tlsStore:
+#         default:
+#           defaultCertificate:
+#             secretName: homehill-wildcard-tls
 #
-# TODO: Add Middlewares for common patterns:
-#       - redirect-https (force HTTPS)
-#       - security-headers (HSTS, frame options, etc.)
-#       - rate-limiting (protect against abuse)
+#       This makes Traefik use the wildcard cert for any IngressRoute without explicit TLS config
+
+# NOTE: AccessLog persistence (optional, low priority)
+#       Currently access logs are ephemeral (stored in container)
+#       For long-term analysis, you could enable persistence:
+#       - Create PVC for logs
+#       - Mount to /var/log/traefik
+#       - Configure log rotation
+#       Trade-off: Disk space vs. log retention
+#       Alternative: Use Loki for centralized logging (better for k8s)
+
+# TODO: Create common Middlewares (PHASE 2 - do this early!)
+#       Priority: HIGH - These are reusable across all IngressRoutes
 #
-# TODO: If exposing services to the internet later, review and harden:
-#       - Remove insecureskipverify
-#       - Enable HTTP/3 (QUIC)
-#       - Add WAF rules via Middlewares
+#       Create these as Middleware CRDs in a separate file:
+#       clusters/apps/traefik/orchard/templates/common-middlewares.yaml
+#
+#       1. redirect-https: Force HTTPS for all HTTP requests
+#          apiVersion: traefik.io/v1alpha1
+#          kind: Middleware
+#          metadata:
+#            name: redirect-https
+#          spec:
+#            redirectScheme:
+#              scheme: https
+#              permanent: true
+#
+#       2. security-headers: Add security headers (HSTS, X-Frame-Options, etc.)
+#          [full example...]
+#
+#       3. rate-limiting: Basic protection (100 req/s per IP)
+#          [full example...]
+
+# NOTE: Internet Exposure (only if you expose cluster publicly)
+#       Current setup is INTERNAL ONLY (homehill.de via Pi-hole DNS)
+#       If you ever expose to internet (e.g., via Cloudflare Tunnel):
+#       - Remove insecureskipverify (use proper certs everywhere)
+#       - Enable HTTP/3 (better performance for remote clients)
+#       - Add WAF rules via Middlewares (OWASP ModSecurity CRS)
+#       - Implement rate limiting aggressively
+#       - Add GeoIP blocking if needed
+
