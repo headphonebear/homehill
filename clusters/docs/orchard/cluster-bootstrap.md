@@ -40,7 +40,8 @@ curl -sfL https://get.k3s.io | sh -s - server \
   --flannel-backend=vxlan
 ```
 
-> **Note:** The `--disable traefik` flag prevents k3s from deploying its built-in Traefik ingress controller, as we will manage Traefik via ArgoCD.
+> **Note:** The `--disable traefik` flag prevents k3s from deploying its built-in Traefik ingress controller, as we will manage Traefik via ArgoCD.  
+> **Note:** vxlan is the default flannel backend, explicitly set here for clarity
 
 Wait for k3s to start. Verify the control plane is ready:
 

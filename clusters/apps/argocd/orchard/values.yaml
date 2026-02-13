@@ -37,12 +37,6 @@ global:
   # 2. Any mounted volumes inherit fsGroup ownership
   # 3. Future SSH keys (if needed) will be readable by the argocd user
 
-cert-manager:
-  letsencrypt:
-    environment: "staging"
-    # WHY: Start with staging certificates to avoid rate limits
-    # Once everything works, switch to "prod" for trusted certificates
-
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ Main ArgoCD Chart Configuration (everything under argo-cd)                 ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
@@ -116,16 +110,6 @@ argo-cd:
       # WHY: Disabled during bootstrap - we access ArgoCD via port-forward first
       # Once ArgoCD is managing itself, we'll add a Traefik IngressRoute via GitOps
       enabled: false
-      # TODO: Enable later with Traefik configuration
-      # className: "traefik"
-      # annotations:
-      #   cert-manager.io/cluster-issuer: "letsencrypt-staging"
-      # hosts:
-      #   - "argocd.orchard.homehill.de"
-      # tls:
-      #   - secretName: argocd-server-tls
-      #     hosts:
-      #       - "argocd.orchard.homehill.de"
 
   # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ ArgoCD Controller Configuration                                        ║
@@ -218,8 +202,6 @@ argo-cd:
 # ║ NOTES FOR FUTURE ENHANCEMENTS                                              ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
-# TODO: Add Traefik IngressRoute once Traefik is deployed via ArgoCD
-# TODO: Switch cert-manager to "prod" environment after testing
 # TODO: Enable notifications once monitoring stack (ntfy/Slack) is ready
 # TODO: Add ApplicationSet for automated app generation
 # TODO: Consider enabling argocd-image-updater for automated image updates
