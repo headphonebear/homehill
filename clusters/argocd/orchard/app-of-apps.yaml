@@ -28,7 +28,7 @@ spec:
     # WHY: We're building the new cluster on the new_season branch
     # Once stable, this will be merged to main
 
-    path: homehill/clusters/argocd/orchard
+    path: clusters/argocd/orchard
     # WHY: This directory contains all Application manifests (including this one!)
     # ArgoCD will recursively find and deploy all *.yaml files here
 
@@ -59,6 +59,3 @@ spec:
     syncOptions:
       - CreateNamespace=true
       # WHY: Create the argocd namespace if it doesn't exist (shouldn't happen, but safe)
-
-      - ServerSideApply=true
-      # WHY: Use server-side apply for better conflict resolution
