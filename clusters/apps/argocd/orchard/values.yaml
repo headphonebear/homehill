@@ -202,6 +202,6 @@ argo-cd:
 # ║ NOTES FOR FUTURE ENHANCEMENTS                                              ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
-# TODO: Enable notifications once monitoring stack (ntfy/Slack) is ready
-# TODO: Add ApplicationSet for automated app generation
-# TODO: Consider enabling argocd-image-updater for automated image updates
+# NOTE: argocd-image-updater available for automated image updates
+# Consider enabling once cluster is stable (6+ months) and monitoring is in place
+# Trade-off: Convenience vs. Control - homelab benefits from manual updates

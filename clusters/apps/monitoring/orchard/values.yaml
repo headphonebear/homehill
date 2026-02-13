@@ -181,7 +181,7 @@ kube-prometheus-stack:
 
   alertmanager:
     enabled: false
-    # WHY: Disabled initially (same as Tools cluster)
+    # WHY: Disabled initially
     # Alertmanager handles alert routing (email, Slack, PagerDuty, etc.)
     # TODO: Enable later when you want notifications
     # You'll need to configure receivers (where alerts go)
@@ -228,7 +228,6 @@ kube-prometheus-stack:
     configReloaderCpu: 200m
     # WHY: Config reloader watches for ConfigMap/Secret changes
     # Triggers Prometheus reload when scrape config changes
-    # Same value as Tools cluster
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ NOTES & TODO                                                               ║
