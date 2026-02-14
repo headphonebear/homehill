@@ -331,6 +331,21 @@ You should see the ArgoCD dashboard with all your applications! 🎉
 
 ## 🎯 Next Steps
 
+### Install Sealed Secrets Private Key
+
+If you have sealed secrets in your repository, install the private key:
+
+```bash
+kubectl create secret tls sealed-secrets-key \
+  --cert=sealing-key.crt \
+  --key=sealing-key.key \
+  -n kube-system
+
+kubectl label secret sealed-secrets-key \
+  -n kube-system \
+  sealedsecrets.bitnami.com/sealed-secrets-key=active
+```
+
 ### Immediate Post-Bootstrap Tasks
 
 1. **Verify ArgoCD Application Health**
@@ -377,6 +392,11 @@ You should see the ArgoCD dashboard with all your applications! 🎉
    ```
 
    Stop the port-forward (Ctrl+C) and access ArgoCD via the IngressRoute instead.
+
+6. **Change ArgoCD Admin Password**
+   ```bash
+   argocd account update-password
+   ```
 
 ### Ongoing Cluster Management
 
