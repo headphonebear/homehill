@@ -15,7 +15,7 @@ appVersion: "68.0.0"
 dependencies:
   - name: kube-prometheus-stack
     repository: https://prometheus-community.github.io/helm-charts
-    version: "68.0.3"
+    version: "81.6.9"
     # WHY: Latest stable version as of Feb 2026
     # Includes:
     # - Prometheus Operator (manages Prometheus/Alertmanager instances)
