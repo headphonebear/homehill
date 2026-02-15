@@ -30,6 +30,65 @@ Before starting the bootstrap process, ensure:
 
 ## 🚀 Bootstrap Steps
 
+### Step 0: Clean Existing Cluster (if applicable) 🧹
+
+If you're re-bootstrapping the cluster or have a previous k3s installation, clean it up first.
+
+> **⚠️ WARNING:** This will **completely destroy** the existing cluster and all its data. Make sure you have backups of any important data or SealedSecrets keys!
+
+#### Clean Worker Nodes First
+
+Start with the worker nodes to gracefully drain workloads:
+
+```bash
+# SSH to lemon
+ssh root@lemon.homehill.de
+/usr/local/bin/k3s-agent-uninstall.sh
+exit
+
+# SSH to plum
+ssh root@plum.homehill.de
+/usr/local/bin/k3s-agent-uninstall.sh
+exit
+```
+
+> **WHY: Worker nodes first**  
+> Cleaning worker nodes before the control plane ensures workloads are gracefully drained and don't cause errors when the control plane shuts down.
+
+#### Clean Control Plane Node
+
+```bash
+# SSH to apple
+ssh root@apple.homehill.de
+/usr/local/bin/k3s-uninstall.sh
+exit
+```
+
+> **WHY: Different uninstall scripts**  
+> Control plane nodes use `k3s-uninstall.sh` while worker nodes use `k3s-agent-uninstall.sh`. The scripts are automatically created during k3s installation.
+
+#### Verify Cleanup
+
+On each node, verify k3s is completely removed:
+
+```bash
+# Check if k3s binary is gone
+which k3s
+# Should return nothing (command not found)
+
+# Check if data directory is gone
+ls -la /var/lib/rancher/k3s/
+# Should return "No such file or directory"
+
+# Check no k3s processes are running
+ps aux | grep k3s
+# Should only show the grep command itself
+```
+
+> **Note:** If the uninstall scripts don't exist, the cluster was likely never fully installed or already cleaned. Proceed to Step 1.
+
+---
+
 ### Step 1: Initialize the k3s Control Plane 🍎
 
 SSH into the control plane node **apple.homehill.de**:
@@ -331,19 +390,86 @@ You should see the ArgoCD dashboard with all your applications! 🎉
 
 ## 🎯 Next Steps
 
-### Install Sealed Secrets Private Key
+### Install Sealed Secrets Private Key 🔐
 
-If you have sealed secrets in your repository, install the private key:
+Sealed Secrets encrypts your Kubernetes secrets so they can be safely stored in Git. The encryption uses a public/private key pair.
+
+#### Understanding Sealed Secrets Keys
+
+- **Public Key (`sealing-key.crt`):** Used to encrypt secrets. Can be shared safely.
+- **Private Key (`sealing-key.key`):** Used by the sealed-secrets controller to decrypt secrets in-cluster. **Must be kept secret!**
+
+> **WHY: Re-use existing keys**  
+> If you're re-bootstrapping the cluster, you **must** install your existing Sealed Secrets private key. Otherwise, all your existing SealedSecret manifests in Git cannot be decrypted and your applications will fail to start.
+
+#### If You Have Existing Keys (Re-bootstrap Scenario)
+
+If you saved your keys from a previous cluster installation, install them now:
 
 ```bash
+# Copy your backed-up keys to the cluster
 kubectl create secret tls sealed-secrets-key \
-  --cert=sealing-key.crt \
-  --key=sealing-key.key \
-  -n kube-system
+  --cert=/path/to/sealing-key.crt \
+  --key=/path/to/sealing-key.key \
+  -n sealed-secrets
 
+# Label the secret so sealed-secrets controller uses it
 kubectl label secret sealed-secrets-key \
-  -n kube-system \
+  -n sealed-secrets \
   sealedsecrets.bitnami.com/sealed-secrets-key=active
+
+# Restart the sealed-secrets controller to pick up the key
+kubectl rollout restart deployment sealed-secrets-controller -n sealed-secrets
+```
+
+> **⚠️ CRITICAL:** Without your original private key, you cannot decrypt existing SealedSecrets! Always backup these keys:
+> - Store in password manager (1Password, Bitwarden, etc.)
+> - Keep offline backup on encrypted USB drive
+> - Store in secure note-taking app (Obsidian with encryption, etc.)
+
+#### If You Don't Have Keys (Fresh Installation)
+
+If this is a brand new cluster and you don't have SealedSecrets in Git yet:
+
+```bash
+# Wait for sealed-secrets controller to generate keys automatically
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=sealed-secrets -n sealed-secrets --timeout=300s
+
+# Extract and backup the generated keys
+kubectl get secret -n sealed-secrets sealed-secrets-key -o jsonpath='{.data.tls\.crt}' | base64 -d > sealing-key.crt
+kubectl get secret -n sealed-secrets sealed-secrets-key -o jsonpath='{.data.tls\.key}' | base64 -d > sealing-key.key
+
+# ⚠️ BACKUP THESE FILES NOW!
+echo "🔐 Sealed Secrets keys saved to:"
+echo "  - sealing-key.crt (public key)"
+echo "  - sealing-key.key (private key - KEEP SECRET!)"
+```
+
+#### Get Public Key for Sealing Secrets
+
+To encrypt new secrets locally, you need the public key:
+
+```bash
+# Fetch public key from the cluster
+kubeseal --fetch-cert --controller-name=sealed-secrets-controller --controller-namespace=sealed-secrets > sealing-key.crt
+
+# Or if you already have it locally:
+cat sealing-key.crt
+```
+
+Use `kubeseal` CLI to encrypt secrets:
+
+```bash
+# Example: Seal a secret
+kubectl create secret generic my-secret \
+  --from-literal=password=supersecret \
+  --dry-run=client -o yaml | \
+kubeseal --cert sealing-key.crt -o yaml > my-sealed-secret.yaml
+
+# Commit my-sealed-secret.yaml to Git safely!
+git add my-sealed-secret.yaml
+git commit -m "Add sealed secret for my-app"
+git push
 ```
 
 ### Immediate Post-Bootstrap Tasks
@@ -519,13 +645,31 @@ kubectl logs -n cert-manager -l app.kubernetes.io/name=cert-manager-webhook-hetz
 - DNS propagation delay (wait 2-3 minutes)
 - Webhook not running or crashed
 
+### SealedSecrets Cannot Decrypt
+
+**Symptom:** Pods fail to start with "SealedSecret cannot be decrypted" errors
+
+**Possible causes:**
+1. **Wrong private key installed:** You installed a different key than was used to encrypt the secrets
+   ```bash
+   # Check which key is active
+   kubectl get secret -n sealed-secrets sealed-secrets-key -o yaml
+   
+   # Compare fingerprint with your backup
+   openssl x509 -in sealing-key.crt -noout -fingerprint
+   ```
+
+2. **Sealed-secrets controller not using the key:** Ensure you labeled the secret and restarted the controller (see "Install Sealed Secrets Private Key" section)
+
+3. **Namespace mismatch:** SealedSecrets are namespace-scoped by default. Ensure the SealedSecret is in the correct namespace.
+
 ---
 
 ## 🦊 Credits
 
 **Documentation by:** Ana 🦊 (Coding with Ana Space)  
 **Cluster Design:** Headphonebear 🐻 & Ana 🦊  
-**Date:** February 13, 2026  
+**Updated:** February 15, 2026  
 **Location:** Kiel, Germany 🇩🇪  
 
 ---
