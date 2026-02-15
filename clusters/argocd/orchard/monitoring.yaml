@@ -59,4 +59,12 @@ spec:
 
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+      # WHY: ServerSideApply=true is REQUIRED for kube-prometheus-stack CRDs
+      # The Prometheus Operator CRDs have OpenAPI schemas that generate
+      # annotations exceeding Kubernetes' 262KB limit for client-side apply.
+      # Server-side apply bypasses this by tracking field ownership instead
+      # of storing the full last-applied-configuration annotation.
+      # Without this, ArgoCD sync fails with:
+      # "metadata.annotations: Too long: may not be more than 262144 bytes"
 
