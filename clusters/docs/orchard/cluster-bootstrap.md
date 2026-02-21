@@ -61,6 +61,15 @@ exit
 
 > **Note:** Control plane uses `k3s-uninstall.sh`, workers use `k3s-agent-uninstall.sh`.
 
+#### Cleanup Longhorn Volumes (if needed)
+
+On each node:
+
+```bash
+rm -rf /mnt/longhorn/*
+```
+
+
 #### Verify Cleanup
 
 On each node:
@@ -69,6 +78,7 @@ On each node:
 which k3s                        # Should return nothing
 ls -la /var/lib/rancher/k3s/     # Should return "No such file or directory"
 ps aux | grep k3s                # Should only show the grep command itself
+ls -la /mnt/longhorn/            # Should be empty when starting over fresh
 ```
 
 ---
@@ -171,7 +181,7 @@ From your **local machine**:
 scp root@apple.homehill.de:/etc/rancher/k3s/k3s.yaml ~/.kube/orchard-config
 ```
 
-Edit `~/.kube/orchard-config` and replace `127.0.0.1` with `apple.homehill.de` (or `192.168.1.50`):
+Edit `~/.kube/orchard-config` and replace `127.0.0.1` with `192.168.1.50` (FQDN apple.homehill.de does not work at this stage because no TLS is set up yet)
 
 ```bash
 sed -i 's/127.0.0.1/apple.homehill.de/g' ~/.kube/orchard-config
@@ -201,6 +211,25 @@ Create the `argocd` namespace:
 
 ```bash
 kubectl create namespace argocd
+```
+
+### Step 4.5: Label nodes for Longhorn
+
+Label nodes for Longhorn disk config:
+```bash
+kubectl label nodes apple lemon plum \
+  node.longhorn.io/create-default-disk=config
+```
+
+Annotate disk path:
+```bash
+kubectl annotate nodes apple lemon plum \
+  'node.longhorn.io/default-disks-config=[{"path":"/mnt/longhorn","allowScheduling":true}]'
+```
+
+Verify:
+```bash
+kubectl get nodes --show-labels | grep longhorn
 ```
 
 > **Note:** No Git credentials needed - `homehill` is a public repository.
