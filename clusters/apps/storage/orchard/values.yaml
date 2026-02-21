@@ -158,7 +158,9 @@ longhorn:
     tolerations: []
     # WHY: Empty tolerations = Longhorn manager runs on all nodes
     # If you had tainted nodes (e.g., control-plane), you'd add tolerations here
-
+    longhornManager:
+      preUpgradeJob: false
+    # WHY: Skip pre-upgrade hook
 
   longhornDriver:
     resources:
