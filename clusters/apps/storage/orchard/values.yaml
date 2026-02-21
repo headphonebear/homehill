@@ -37,7 +37,7 @@ longhorn:
     # Alternative: Retain (volume stays even after PVC deletion - for backups)
     # For homelab: Delete is cleaner (no orphaned volumes)
 
-    defaultDataPath: /var/lib/longhorn
+    defaultDataPath: /mnt/longhorn
     # WHY: Where Longhorn stores volume data on each node
     # This path already exists on your nodes (you showed ls /var/lib/longhorn/)
     # Longhorn creates subdirectories: replicas/, engine-binaries/, logs/, etc.
