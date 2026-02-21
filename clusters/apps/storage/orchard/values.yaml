@@ -37,12 +37,6 @@ longhorn:
     # Alternative: Retain (volume stays even after PVC deletion - for backups)
     # For homelab: Delete is cleaner (no orphaned volumes)
 
-    createDefaultDiskLabeledNodes: true
-    defaultDataPath: /mnt/longhorn
-    # WHY: Where Longhorn stores volume data on each node
-    # This path already exists on your nodes (you showed ls /var/lib/longhorn/)
-    # Longhorn creates subdirectories: replicas/, engine-binaries/, logs/, etc.
-
   # ╔──────────────────────────────────────────────────────────────────────────╗
   # ║ Storage Settings                                                         ║
   # ╚──────────────────────────────────────────────────────────────────────────╝
@@ -50,6 +44,15 @@ longhorn:
   defaultSettings:
     # WHY: These are cluster-wide Longhorn settings
     # They can be changed later via Longhorn UI or kubectl edit settings.longhorn.io
+
+    createDefaultDiskLabeledNodes: true
+    defaultDataPath: /mnt/longhorn
+    defaultReplicaCount: 2
+    
+    # WHY: Where Longhorn stores volume data on each node
+    # This path already exists on your nodes (you showed ls /var/lib/longhorn/)
+    # Longhorn creates subdirectories: replicas/, engine-binaries/, logs/, etc.
+
 
     backupTarget: ""
     # WHY: No backup target configured initially
