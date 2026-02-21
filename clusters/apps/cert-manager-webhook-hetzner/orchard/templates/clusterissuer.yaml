@@ -44,9 +44,13 @@ spec:
             groupName: acme.homehill.de
 
             config:
-              # WHY: Der vadimkim/cert-manager-webhook-hetzner verwendet
-              # "secretName" statt "tokenSecretKeyRef" in der Config!
-              # Das Secret muss in cert-manager Namespace liegen und "api-token"
-              # als Key haben (nicht "token"!).
-              secretName: hetzner
+              # WHY: Das offizielle github.com/hetzner/cert-manager-webhook-hetzner
+              # nutzt tokenSecretKeyRef mit Key "api-token".
+              # Der Token muss aus der Hetzner Cloud Console kommen (nicht DNS Console).
+              # Die alte DNS Console API wurde mit der neuen Hetzner Console abgeschafft.
+              secretNamespace: cert-manager
+              tokenSecretKeyRef:
+                name: hetzner
+                key: api-token
+              zoneName: homehill.de
               apiUrl: https://dns.hetzner.com/api/v1
