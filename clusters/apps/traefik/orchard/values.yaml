@@ -9,9 +9,9 @@
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 traefik:
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Deployment Configuration                                                 ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   deployment:
     kind: DaemonSet
@@ -22,9 +22,9 @@ traefik:
     # - Even load distribution: Each node can accept connections directly
     # Alternative would be Deployment with replicas=2-3, but DaemonSet is simpler for 3-node clusters
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ IngressClass Configuration                                               ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   ingressClass:
     enabled: true
@@ -36,9 +36,9 @@ traefik:
     # WHY: Standard name - when creating IngressRoutes, you reference this class
     # Example: ingressClassName: traefik
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Service Configuration                                                    ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   service:
     enabled: true
@@ -49,9 +49,9 @@ traefik:
     # - Exposes ports 80 and 443 on every node
     # - Balances traffic across DaemonSet pods
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Ports Configuration                                                      ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   ports:
     web:
@@ -95,9 +95,9 @@ traefik:
         # Access via 'kubectl port-forward' or create a secure IngressRoute later
       protocol: TCP
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ TLS Configuration                                                        ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   tlsOptions:
     default:
@@ -112,9 +112,9 @@ traefik:
         # WHY: Modern, secure cipher suites only
         # Excludes weak ciphers that are vulnerable to attacks
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Logs Configuration                                                       ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   logs:
     general:
@@ -128,9 +128,9 @@ traefik:
       # WHY: Log all incoming requests (useful for debugging IngressRoutes)
       # Can be disabled in production if logs become too large
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Metrics & Monitoring                                                     ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   metrics:
     prometheus:
@@ -145,9 +145,9 @@ traefik:
         # This tells Prometheus: "scrape metrics from Traefik pods"
         # Without this, Prometheus won't discover Traefik's metrics
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Dashboard Configuration                                                  ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   ingressRoute:
     dashboard:
@@ -157,9 +157,9 @@ traefik:
       # TODO: Enable later with authentication via IngressRoute + BasicAuth middleware
       # Example: Create a separate IngressRoute for dashboard.orchard.homehill.de with auth
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Provider Configuration                                                   ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   providers:
     kubernetesIngress:
@@ -177,9 +177,9 @@ traefik:
       # This is the recommended way to configure Traefik
       # More powerful than standard Ingress (supports TCP/UDP, middlewares, etc.)
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Global Arguments                                                         ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   additionalArguments:
     - "--serverstransport.insecureskipverify=true"
@@ -187,9 +187,9 @@ traefik:
     # Useful for internal services that don't have proper certs yet
     # WARNING: Only use in homelab, not in production!
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Resource Limits                                                          ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚────────────────────────────────────────────────────────────────────────╝
 
   resources:
     requests:
@@ -208,10 +208,14 @@ traefik:
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 traefik-crds:
+  # WHY: CRITICAL FIX - Helm dependencies must have explicit config, even if empty!
+  # Without enabled: true, Helm template engine gets confused and throws:
+  # "type mismatch on traefik-crds: %!t(<nil>)"
+  # This happens because an empty YAML block is interpreted as nil instead of an object.
+  enabled: true
+  
   # WHY: This section configures the traefik-crds chart (separate from traefik itself)
   # CRDs are deployed first, then Traefik can use them
-
-  # No additional configuration needed - the chart just installs the CRDs
   # CRDs include: IngressRoute, IngressRouteTCP, IngressRouteUDP, Middleware,
   #               TLSOption, TLSStore, TraefikService, ServersTransport
 
@@ -272,4 +276,3 @@ traefik-crds:
 #       - Add WAF rules via Middlewares (OWASP ModSecurity CRS)
 #       - Implement rate limiting aggressively
 #       - Add GeoIP blocking if needed
-
