@@ -96,12 +96,14 @@ Install k3s:
 ```bash
 curl -sfL https://get.k3s.io | sh -s - server \
   --disable traefik \
+  --disable local-storage \
   --write-kubeconfig-mode 644 \
   --flannel-backend=vxlan
 ```
 
 > **WHY flags:**
 > - `--disable traefik`: We manage Traefik via ArgoCD with custom config
+> - `--disable local-storage`: Prevents k3s from creating `local-path` StorageClass; Longhorn will be our only storage provider
 > - `--write-kubeconfig-mode 644`: Makes kubeconfig readable by non-root users
 > - `--flannel-backend=vxlan`: Explicit default for documentation clarity
 
@@ -110,6 +112,13 @@ Verify control plane is ready:
 ```bash
 k3s kubectl get nodes
 # Expected: apple with status Ready
+```
+
+Verify no StorageClass exists yet:
+
+```bash
+k3s kubectl get storageclass
+# Expected: No resources found
 ```
 
 Get the **node token** for joining workers:
@@ -181,7 +190,7 @@ From your **local machine**:
 scp root@apple.homehill.de:/etc/rancher/k3s/k3s.yaml ~/.kube/orchard-config
 ```
 
-Edit `~/.kube/orchard-config` and replace `127.0.0.1` with `192.168.1.50` (FQDN apple.homehill.de does not work at this stage because no TLS is set up yet)
+Edit `~/.kube/orchard-config` and replace `127.0.0.1` with `apple.homehill.de`:
 
 ```bash
 sed -i 's/127.0.0.1/apple.homehill.de/g' ~/.kube/orchard-config
@@ -203,40 +212,13 @@ kubectl get nodes
 # Should show apple, lemon, plum all Ready
 ```
 
----
-
-### Step 3.5: Configure Default StorageClass 💾
-
-> **⚠️ CRITICAL:** K3s ships with `local-path` as the default StorageClass. We need to disable it as default **before** deploying Longhorn, otherwise we'll end up with two default StorageClasses!
-
-Patch the `local-path` StorageClass to remove the default annotation:
-
-```bash
-kubectl patch storageclass local-path \
-  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
-```
-
-Verify that `local-path` is no longer default:
+Verify no StorageClass exists:
 
 ```bash
 kubectl get storageclass
+# Expected: No resources found
+# Longhorn will create the only StorageClass during bootstrap
 ```
-
-Expected output:
-
-```
-NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  5m
-```
-
-> **Note:** No `(default)` marker should appear. Longhorn will become the default when deployed in Step 6.
-
-> **WHY:** 
-> - K3s automatically creates `local-path` StorageClass and marks it as default
-> - Longhorn is configured with `defaultClass: true` in `values.yaml`
-> - Having two defaults causes unpredictable PVC binding behavior
-> - By removing the default annotation now, Longhorn cleanly becomes the sole default
-> - `local-path` remains available for explicit use (e.g., `storageClassName: local-path`)
 
 ---
 
@@ -247,6 +229,10 @@ Create the `argocd` namespace:
 ```bash
 kubectl create namespace argocd
 ```
+
+> **Note:** No Git credentials needed - `homehill` is a public repository.
+
+---
 
 ### Step 4.5: Label Nodes for Longhorn 🏷️
 
@@ -271,12 +257,10 @@ kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, annotations: .
 ```
 
 > **WHY:**
-> - `node.longhorn.io/create-default-disk=config`: Triggers automatic disk setup
+> - `node.longhorn.io/create-default-disk=config`: Triggers automatic disk setup using the annotation-based configuration method
 > - Annotation specifies `/mnt/longhorn` as the storage path on each node
 > - `allowScheduling:true` permits Longhorn to place replicas on these disks
 > - Without these, Longhorn would require manual disk configuration via the UI
-
-> **Note:** No Git credentials needed - `homehill` is a public repository.
 
 ---
 
@@ -404,22 +388,17 @@ kubectl get storageclass
 Expected output:
 
 ```
-NAME                 PROVISIONER          RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-local-path           rancher.io/local-path   Delete          WaitForFirstConsumer   false                  15m
-longhorn (default)   driver.longhorn.io      Delete          Immediate              true                   2m
+NAME                 PROVISIONER          RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+longhorn (default)   driver.longhorn.io   Delete          Immediate           true                   2m
 ```
 
-> **SUCCESS:** Only `longhorn` should have the `(default)` marker!
+> **SUCCESS:** Only `longhorn` should exist and be marked as `(default)`!
 
-If you see two defaults or wrong default, troubleshoot:
+Verify Longhorn is healthy:
 
 ```bash
-# Check what's marked as default
-kubectl get storageclass -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}{"\n"}{end}'
-
-# Should show:
-# local-path    false
-# longhorn      true
+kubectl get pods -n longhorn-system
+# All pods should be Running
 ```
 
 ---
@@ -468,8 +447,7 @@ kubectl get clusterissuer
 # Check Hetzner DNS webhook
 kubectl get pods -n cert-manager -l app.kubernetes.io/name=cert-manager-webhook-hetzner
 
-# Verify Longhorn is healthy
-kubectl get pods -n longhorn-system
+# Verify Longhorn is the only StorageClass
 kubectl get storageclass
 ```
 
@@ -521,12 +499,13 @@ argocd account update-password
 ## 📝 Notes
 
 - **Traefik:** Disabled in k3s, managed via ArgoCD
+- **Local Storage:** Disabled in k3s (`--disable local-storage`); Longhorn is the sole storage provider
 - **Flannel CNI:** Included by default (VXLAN backend)
-- **CoreDNS, ServiceLB, Local Path Provisioner:** All included in k3s
+- **CoreDNS, ServiceLB:** Included in k3s
 - **DNS:** Nodes use FQDN (`apple.homehill.de` etc.) via Pi-hole or `/etc/hosts`
 - **Public Repo:** No SSH keys needed, ArgoCD clones via HTTPS
 - **Idempotency:** Re-running most steps is safe except k3s control plane install (resets cluster!)
-- **StorageClass:** `local-path` kept available but non-default; Longhorn is the default and preferred storage
+- **StorageClass:** Only Longhorn exists; no `local-path` conflicts possible
 
 ---
 
@@ -591,19 +570,26 @@ If wrong key installed: Install correct key from backup and restart controller:
 kubectl rollout restart deployment sealed-secrets -n kube-system
 ```
 
-### Two Default StorageClasses
+### Longhorn Not Creating StorageClass
 
-This should not happen if Step 3.5 was followed correctly. If it does:
+If Longhorn deploys but doesn't create a StorageClass:
 
 ```bash
-# Remove default from local-path
-kubectl patch storageclass local-path \
-  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+# Check Longhorn manager logs
+kubectl logs -n longhorn-system -l app=longhorn-manager --tail=50
 
-# Ensure longhorn is default
-kubectl patch storageclass longhorn \
-  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+# Verify node labels and annotations
+kubectl get nodes --show-labels | grep longhorn
+kubectl describe nodes | grep -A 5 Annotations
+
+# Check if disks are configured
+kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, annotations: .metadata.annotations}'
 ```
+
+Common issues:
+- Missing or incorrect node labels/annotations (see Step 4.5)
+- `/mnt/longhorn` directory doesn't exist on nodes
+- Insufficient disk space
 
 ---
 
