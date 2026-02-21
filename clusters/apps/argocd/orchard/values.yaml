@@ -65,6 +65,81 @@ argo-cd:
       # This should match the actual URL users will access ArgoCD at
       url: https://argocd.orchard.homehill.de
 
+      # ┌──────────────────────────────────────────────────────────────────┐
+      # │ Custom Resource Health Checks for cert-manager                       │
+      # └──────────────────────────────────────────────────────────────────┘
+      # WHY: ArgoCD doesn't know how to check health of cert-manager resources
+      # by default. Without this, Certificate and Issuer resources stay in
+      # "Progressing" state forever, even when they're actually healthy.
+      # This Lua script teaches ArgoCD to read cert-manager's status conditions.
+      resource.customizations: |
+        cert-manager.io/Certificate:
+          health.lua: |
+            hs = {}
+            if obj.status ~= nil then
+              if obj.status.conditions ~= nil then
+                for i, condition in ipairs(obj.status.conditions) do
+                  if condition.type == "Ready" and condition.status == "False" then
+                    hs.status = "Degraded"
+                    hs.message = condition.message
+                    return hs
+                  end
+                  if condition.type == "Ready" and condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = condition.message
+                    return hs
+                  end
+                end
+              end
+            end
+            hs.status = "Progressing"
+            hs.message = "Waiting for certificate"
+            return hs
+        cert-manager.io/ClusterIssuer:
+          health.lua: |
+            hs = {}
+            if obj.status ~= nil then
+              if obj.status.conditions ~= nil then
+                for i, condition in ipairs(obj.status.conditions) do
+                  if condition.type == "Ready" and condition.status == "False" then
+                    hs.status = "Degraded"
+                    hs.message = condition.message
+                    return hs
+                  end
+                  if condition.type == "Ready" and condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = condition.message
+                    return hs
+                  end
+                end
+              end
+            end
+            hs.status = "Progressing"
+            hs.message = "Waiting for issuer to be ready"
+            return hs
+        cert-manager.io/Issuer:
+          health.lua: |
+            hs = {}
+            if obj.status ~= nil then
+              if obj.status.conditions ~= nil then
+                for i, condition in ipairs(obj.status.conditions) do
+                  if condition.type == "Ready" and condition.status == "False" then
+                    hs.status = "Degraded"
+                    hs.message = condition.message
+                    return hs
+                  end
+                  if condition.type == "Ready" and condition.status == "True" then
+                    hs.status = "Healthy"
+                    hs.message = condition.message
+                    return hs
+                  end
+                end
+              end
+            end
+            hs.status = "Progressing"
+            hs.message = "Waiting for issuer to be ready"
+            return hs
+
   # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Redis Configuration                                                    ║
   # ╚────────────────────────────────────────────────────────────────────────╝
