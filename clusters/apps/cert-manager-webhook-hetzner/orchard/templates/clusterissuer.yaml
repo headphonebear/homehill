@@ -44,13 +44,16 @@ spec:
             groupName: acme.homehill.de
 
             config:
-              # WHY: Das offizielle github.com/hetzner/cert-manager-webhook-hetzner
-              # nutzt tokenSecretKeyRef mit Key "api-token".
-              # Der Token muss aus der Hetzner Cloud Console kommen (nicht DNS Console).
-              # Die alte DNS Console API wurde mit der neuen Hetzner Console abgeschafft.
+              # WHY: CRITICAL! Der Webhook muss wissen, in welchem Namespace das
+              # Secret liegt. Ohne secretNamespace sucht er in "/" (leer) und
+              # findet nichts, was zu "resource name may not be empty" führt.
+              # Das Secret "hetzner" liegt in cert-manager Namespace!
               secretNamespace: cert-manager
+              
+              # WHY: Hier steht, wo der Webhook den Hetzner API Token findet.
+              # Secret Name: "hetzner" (haben wir oben gefixt!)
+              # Secret Key: "token" (nicht "api-key"!)
+              # Das muss exakt mit dem SealedSecret übereinstimmen.
               tokenSecretKeyRef:
                 name: hetzner
-                key: api-token
-              zoneName: homehill.de
-              apiUrl: https://dns.hetzner.com/api/v1
+                key: token
