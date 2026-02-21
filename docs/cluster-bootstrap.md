@@ -26,6 +26,7 @@ Before starting the bootstrap process, ensure:
 - ✅ Git clone of the `homehill` repository on branch `new_season`
 - ✅ Network connectivity between all nodes (192.168.1.50-52 can reach each other)
 - ✅ **If re-bootstrapping:** Sealed Secrets keys (`sealing-key.key` + `sealing-key.crt`) backed up and ready
+- ✅ `/mnt/longhorn` directory exists on all nodes with correct permissions
 
 ---
 
@@ -195,6 +196,28 @@ kubectl get nodes
 
 ---
 
+### Step 3.5: Label Nodes for Longhorn Storage 💿
+
+> **⚠️ CRITICAL:** This step must be done **before** deploying the storage Application. Without these labels, Longhorn will not create default disks on the nodes.
+
+**Label all nodes for Longhorn disk creation:**
+
+```bash
+kubectl label node apple lemon plum node.longhorn.io/create-default-disk=true
+```
+
+> **WHY:** The Longhorn setting `createDefaultDiskLabeledNodes: true` is misleadingly named. It does NOT mean "create disks on all nodes automatically". It means "create disks on nodes that have the label `node.longhorn.io/create-default-disk=true`". Without this label, Longhorn will start successfully but have zero storage capacity.
+
+Verify labels:
+
+```bash
+kubectl get nodes --show-labels | grep longhorn
+```
+
+Expected: All three nodes should show `node.longhorn.io/create-default-disk=true` in their labels.
+
+---
+
 ### Step 4: Prepare ArgoCD Namespace 📦
 
 Create the `argocd` namespace:
@@ -335,14 +358,34 @@ traefik                       Synced        Progressing
 # Check Longhorn pods (should see manager, driver, ui pods)
 kubectl get pods -n longhorn-system
 
-# Verify Longhorn nodes have discovered disks
-kubectl get nodes.longhorn.io -n longhorn-system -o wide
-
-# Check if default disk was created on each node
-kubectl get disks.longhorn.io -n longhorn-system
+# Verify Longhorn nodes have discovered disks (CRITICAL CHECK!)
+kubectl get nodes.longhorn.io -n longhorn-system -o yaml | grep -A 5 "disks:"
 ```
 
-Expected: Each node should have a disk at `/mnt/longhorn` with status `Ready`.
+Expected: Each node should have a `default-disk-*` entry (not `disks: {}`). Example:
+
+```yaml
+disks:
+  default-disk-abc123:
+    allowScheduling: true
+    diskType: filesystem
+```
+
+If you see `disks: {}`, the labels from Step 3.5 are missing!
+
+**Verify StorageClass:**
+
+```bash
+kubectl get storageclass
+```
+
+Expected: `longhorn` should be marked as `(default)`.
+
+If `local-path (default)` appears, remove its default annotation:
+
+```bash
+kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+```
 
 ---
 
@@ -382,6 +425,9 @@ kubectl get pods -n traefik
 kubectl get pods -n cert-manager
 kubectl get pods -n kube-system | grep sealed-secrets
 kubectl get pods -n longhorn-system
+
+# Verify Longhorn storage capacity
+kubectl get nodes.longhorn.io -n longhorn-system -o wide
 
 # Monitor certificate issuance
 kubectl get certificate -A
@@ -510,35 +556,39 @@ kubectl rollout restart deployment sealed-secrets -n kube-system
 
 ### Longhorn Disks Not Created
 
-If `kubectl get nodes.longhorn.io` shows nodes with 0 disks:
+If `kubectl get nodes.longhorn.io -n longhorn-system -o yaml | grep "disks:"` shows `disks: {}` on all nodes:
+
+**ROOT CAUSE:** Nodes are missing the label `node.longhorn.io/create-default-disk=true`.
+
+**Fix:**
 
 ```bash
-# Check Longhorn settings
-kubectl get settings.longhorn.io -n longhorn-system
+# Add labels to all nodes
+kubectl label node apple lemon plum node.longhorn.io/create-default-disk=true
 
-# Verify createDefaultDiskLabeledNodes is true
-kubectl get settings.longhorn.io create-default-disk-labeled-nodes -n longhorn-system -o yaml
+# Wait 10-15 seconds for Longhorn to detect the label
+sleep 15
+
+# Verify disks were created
+kubectl get nodes.longhorn.io -n longhorn-system -o yaml | grep -A 5 "disks:"
 ```
 
-**Common causes:**
-- `values.yaml` missing `longhorn:` prefix for umbrella chart dependencies
-- Nodes missing labels (add with: `kubectl label node <node> node.longhorn.io/create-default-disk=true`)
-- Data path `/mnt/longhorn` not writable
+Expected: Each node should now have a `default-disk-*` entry.
 
-**Fix:** Ensure `values.yaml` has all Longhorn settings under `longhorn:` key:
-
-```yaml
-longhorn:  # <-- Umbrella chart prefix!
-  defaultSettings:
-    createDefaultDiskLabeledNodes: true
-    defaultDataPath: /mnt/longhorn
-```
-
-After fixing values, sync the storage Application:
+**If disks still don't appear:**
 
 ```bash
-kubectl patch application storage -n argocd --type merge -p '{"operation":{"sync":{}}}'
+# Check Longhorn manager logs
+kubectl logs -n longhorn-system -l app=longhorn-manager --tail=50 | grep -i "disk\|error"
+
+# Verify /mnt/longhorn exists and is writable on each node
+ssh root@apple.homehill.de "ls -la /mnt/longhorn && touch /mnt/longhorn/test && rm /mnt/longhorn/test"
 ```
+
+**Other common causes:**
+- `values.yaml` missing `longhorn:` prefix for umbrella chart dependencies (check Git: `clusters/apps/storage/orchard/values.yaml`)
+- Data path `/mnt/longhorn` not writable or doesn't exist
+- Longhorn Setting `create-default-disk-labeled-nodes` is `false` (check: `kubectl get settings.longhorn.io create-default-disk-labeled-nodes -n longhorn-system -o yaml`)
 
 ---
 
