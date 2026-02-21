@@ -205,6 +205,41 @@ kubectl get nodes
 
 ---
 
+### Step 3.5: Configure Default StorageClass 💾
+
+> **⚠️ CRITICAL:** K3s ships with `local-path` as the default StorageClass. We need to disable it as default **before** deploying Longhorn, otherwise we'll end up with two default StorageClasses!
+
+Patch the `local-path` StorageClass to remove the default annotation:
+
+```bash
+kubectl patch storageclass local-path \
+  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+```
+
+Verify that `local-path` is no longer default:
+
+```bash
+kubectl get storageclass
+```
+
+Expected output:
+
+```
+NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  5m
+```
+
+> **Note:** No `(default)` marker should appear. Longhorn will become the default when deployed in Step 6.
+
+> **WHY:** 
+> - K3s automatically creates `local-path` StorageClass and marks it as default
+> - Longhorn is configured with `defaultClass: true` in `values.yaml`
+> - Having two defaults causes unpredictable PVC binding behavior
+> - By removing the default annotation now, Longhorn cleanly becomes the sole default
+> - `local-path` remains available for explicit use (e.g., `storageClassName: local-path`)
+
+---
+
 ### Step 4: Prepare ArgoCD Namespace 📦
 
 Create the `argocd` namespace:
@@ -213,7 +248,9 @@ Create the `argocd` namespace:
 kubectl create namespace argocd
 ```
 
-### Step 4.5: Label nodes for Longhorn
+### Step 4.5: Label Nodes for Longhorn 🏷️
+
+> **Note:** These labels tell Longhorn where to store data and enable automatic disk configuration.
 
 Label nodes for Longhorn disk config:
 ```bash
@@ -227,10 +264,17 @@ kubectl annotate nodes apple lemon plum \
   'node.longhorn.io/default-disks-config=[{"path":"/mnt/longhorn","allowScheduling":true}]'
 ```
 
-Verify:
+Verify labels and annotations:
 ```bash
 kubectl get nodes --show-labels | grep longhorn
+kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, annotations: .metadata.annotations | with_entries(select(.key | contains("longhorn")))}'
 ```
+
+> **WHY:**
+> - `node.longhorn.io/create-default-disk=config`: Triggers automatic disk setup
+> - Annotation specifies `/mnt/longhorn` as the storage path on each node
+> - `allowScheduling:true` permits Longhorn to place replicas on these disks
+> - Without these, Longhorn would require manual disk configuration via the UI
 
 > **Note:** No Git credentials needed - `homehill` is a public repository.
 
@@ -349,6 +393,37 @@ traefik                       Synced        Progressing
 
 ---
 
+### Step 6.5: Verify StorageClass Configuration ✅
+
+After Longhorn deploys (takes 2-3 minutes), verify the StorageClass setup:
+
+```bash
+kubectl get storageclass
+```
+
+Expected output:
+
+```
+NAME                 PROVISIONER          RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-path           rancher.io/local-path   Delete          WaitForFirstConsumer   false                  15m
+longhorn (default)   driver.longhorn.io      Delete          Immediate              true                   2m
+```
+
+> **SUCCESS:** Only `longhorn` should have the `(default)` marker!
+
+If you see two defaults or wrong default, troubleshoot:
+
+```bash
+# Check what's marked as default
+kubectl get storageclass -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.annotations.storageclass\.kubernetes\.io/is-default-class}{"\n"}{end}'
+
+# Should show:
+# local-path    false
+# longhorn      true
+```
+
+---
+
 ### Step 7: Access ArgoCD UI 🖥️
 
 Get the initial admin password:
@@ -384,6 +459,7 @@ kubectl get applications -n argocd
 kubectl get pods -n traefik
 kubectl get pods -n cert-manager
 kubectl get pods -n kube-system | grep sealed-secrets
+kubectl get pods -n longhorn-system
 
 # Monitor certificate issuance
 kubectl get certificate -A
@@ -391,6 +467,10 @@ kubectl get clusterissuer
 
 # Check Hetzner DNS webhook
 kubectl get pods -n cert-manager -l app.kubernetes.io/name=cert-manager-webhook-hetzner
+
+# Verify Longhorn is healthy
+kubectl get pods -n longhorn-system
+kubectl get storageclass
 ```
 
 Once Traefik and certificates are ready, ArgoCD will be accessible at: `https://argocd.orchard.homehill.de`
@@ -446,6 +526,7 @@ argocd account update-password
 - **DNS:** Nodes use FQDN (`apple.homehill.de` etc.) via Pi-hole or `/etc/hosts`
 - **Public Repo:** No SSH keys needed, ArgoCD clones via HTTPS
 - **Idempotency:** Re-running most steps is safe except k3s control plane install (resets cluster!)
+- **StorageClass:** `local-path` kept available but non-default; Longhorn is the default and preferred storage
 
 ---
 
@@ -510,13 +591,27 @@ If wrong key installed: Install correct key from backup and restart controller:
 kubectl rollout restart deployment sealed-secrets -n kube-system
 ```
 
+### Two Default StorageClasses
+
+This should not happen if Step 3.5 was followed correctly. If it does:
+
+```bash
+# Remove default from local-path
+kubectl patch storageclass local-path \
+  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+
+# Ensure longhorn is default
+kubectl patch storageclass longhorn \
+  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+```
+
 ---
 
 ## 🦊 Credits
 
 **Documentation by:** Ana 🦊 (Coding with Ana Space)  
 **Cluster Design:** Headphonebear 🐻 & Ana 🦊  
-**Updated:** February 15, 2026  
+**Updated:** February 21, 2026  
 **Location:** Kiel, Germany 🇩🇪  
 
 ---
