@@ -14,6 +14,10 @@ longhorn:
   # ║ Global Settings                                                          ║
   # ╚──────────────────────────────────────────────────────────────────────────╝
 
+  preUpgradeChecker:
+    jobEnabled: false
+    # WHY: Skip pre-upgrade hook for fresh install (no previous version to check)
+
   persistence:
     defaultClass: true
     # WHY: Make Longhorn the default StorageClass for the cluster
@@ -158,8 +162,6 @@ longhorn:
     tolerations: []
     # WHY: Empty tolerations = Longhorn manager runs on all nodes
     # If you had tainted nodes (e.g., control-plane), you'd add tolerations here
-    preUpgradeJob: false
-    # WHY: Skip pre-upgrade hook
 
   longhornDriver:
     resources:
