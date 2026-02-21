@@ -44,6 +44,12 @@ spec:
             groupName: acme.homehill.de
 
             config:
+              # WHY: CRITICAL! Der Webhook muss wissen, in welchem Namespace das
+              # Secret liegt. Ohne secretNamespace sucht er in "/" (leer) und
+              # findet nichts, was zu "resource name may not be empty" führt.
+              # Das Secret "hetzner" liegt in cert-manager Namespace!
+              secretNamespace: cert-manager
+              
               # WHY: Hier steht, wo der Webhook den Hetzner API Token findet.
               # Secret Name: "hetzner" (haben wir oben gefixt!)
               # Secret Key: "token" (nicht "api-key"!)
