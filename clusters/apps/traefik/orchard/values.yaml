@@ -75,15 +75,20 @@ traefik:
       expose:
         default: true
       protocol: TCP
+      
+      # WHY: HTTP/3 support (QUIC) - disabled for now
+      # Can be enabled later for better performance with modern browsers
+      # Requires UDP port 443 to be open
       http3:
         enabled: false
-        # WHY: HTTP/3 (QUIC) support - disabled for now
-        # Can be enabled later for better performance with modern browsers
-        # Requires UDP port 443 to be open
-      tls:
-        enabled: true
-        # WHY: Enable TLS on this entrypoint
-        # Certificates will be provided by cert-manager via Certificate resources
+      
+      # WHY: TLS configuration must be nested under 'http' in Traefik v3.x / Helm chart v39+
+      # Schema changed from direct 'tls:' to 'http: tls:' structure
+      # This enables TLS on the websecure entrypoint
+      # Certificates will be provided by cert-manager via Certificate resources
+      http:
+        tls:
+          enabled: true
 
     traefik:
       # WHY: Traefik dashboard/API port
