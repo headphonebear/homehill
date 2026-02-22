@@ -1,0 +1,55 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ VictoriaMetrics Application                                               ║
+# ║ Long-term time-series storage backend for Prometheus                      ║
+# ║ DEPLOYMENT ORDER: Deploy BEFORE monitoring (Prometheus needs it ready)    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: victoriametrics
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+    argocd.argoproj.io/sync-wave: "-1"
+    # WHY: Deploy VictoriaMetrics BEFORE monitoring stack
+    # Prometheus will remote-write to VM immediately after startup
+    # If VM isn't ready, remote-write buffer fills up and samples are dropped
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: VictoriaMetrics Helm chart                                       ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/victoriametrics/orchard
+
+    helm:
+      releaseName: victoriametrics
+
+      valueFiles:
+        - values.yaml
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: monitoring namespace (shared with Prometheus/Grafana)       ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+    # WHY: Deploy VictoriaMetrics in same namespace as Prometheus
+    # Simplifies service discovery (Prometheus can reach VM via service name)
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY                                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,25 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ cert-manager Umbrella Chart for Orchard                                   ║
+# ║ Automated TLS certificate management via Let's Encrypt                    ║
+# ║ INCLUDES: Support for DNS-01 challenges (for *.homehill.de wildcard)      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v2
+name: cert-manager-orchard
+description: Automated TLS certificate management for Orchard cluster at Homehill
+type: application
+version: 1.0.0
+appVersion: "1.19.3"
+# WHY: appVersion matches cert-manager's actual version
+
+dependencies:
+  - name: cert-manager
+    repository: https://charts.jetstack.io
+    version: "1.19.3"
+    # WHY: Official cert-manager Helm chart
+    # This version is stable and well-tested with Kubernetes 1.28+
+    # Handles Let's Encrypt certificate issuance, renewal, and management
+
+# NOTE: Hetzner DNS webhook will be added as a separate Application later
+# WHY: Webhook needs to be installed AFTER cert-manager is running
+# It extends cert-manager with DNS-01 challenge support for Hetzner DNS

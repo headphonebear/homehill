@@ -1,0 +1,6 @@
+dependencies:
+- name: cert-manager-webhook-hetzner
+  repository: https://charts.hetzner.cloud
+  version: 0.6.3
+digest: sha256:d1baa397b995f9dab48340d31b996f4fac5276147dbbd3146a42ec802b530f07
+generated: "2026-02-22T11:23:27.903227611+01:00"

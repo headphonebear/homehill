@@ -1,0 +1,10 @@
+apiVersion: v2
+name: argocd-orchard
+description: Bootstrap chart to configure ArgoCD for the Orchard cluster at Homehill
+type: application
+version: 1.0.0
+appVersion: "3.2.5"
+dependencies:
+  - name: argo-cd
+    version: "9.4.1"
+    repository: "https://argoproj.github.io/argo-helm"

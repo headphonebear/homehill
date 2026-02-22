@@ -1,0 +1,46 @@
+# WHY: A Certificate is a request to Let's Encrypt: "Please give me
+# a TLS cert for these domains". Cert-manager uses the ClusterIssuer,
+# solves the challenge, and stores the finished cert as a Secret.
+# Wildcard certs (*.homehill.de) work for all subdomains!
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  # WHY: Name of the Certificate object - choose descriptively
+  name: homehill-wildcard
+  # WHY: Certificates are namespace-bound. Default namespace is good for
+  # cluster-wide wildcard certs used by many apps.
+  # Traefik can read Secrets from other namespaces (with RBAC).
+  namespace: default
+  labels:
+    app.kubernetes.io/name: cert-manager-webhook-hetzner
+    app.kubernetes.io/component: certificate
+spec:
+  # WHY: The finished TLS cert is stored in this Secret.
+  # The Secret contains: tls.crt (certificate + chain) and tls.key (private key)
+  # Traefik or other Ingress controllers can reference this Secret.
+  secretName: homehill-wildcard-tls
+
+  # WHY: Which issuer should issue the cert? Our letsencrypt-prod!
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    # WHY: Group is important when multiple CRDs with the same name exist
+    group: cert-manager.io
+
+  # WHY: Common Name is the "main" subject of the cert. Shown in the
+  # Certificate Subject line. Usually identical to the first dnsName.
+  commonName: "*.homehill.de"
+
+  # WHY: DNS Names are the Subject Alternative Names (SANs) - the domains
+  # this cert is valid for. Wildcard (*.homehill.de) matches all subdomains,
+  # but NOT the root domain (homehill.de) - that's why we need both!
+  dnsNames:
+    - "*.homehill.de"  # WHY: Matches foo.homehill.de, bar.homehill.de, etc.
+    - "homehill.de"    # WHY: Matches the root domain
+
+  # WHY: Let's Encrypt certs are valid for 90 days. Cert-manager renews
+  # automatically 30 days before expiration (2/3 of lifetime). renewBefore
+  # can be adjusted if you want to renew earlier.
+  # renewBefore: 720h  # Optional: 30 days before expiration (default)

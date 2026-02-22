@@ -1,0 +1,66 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Monitoring Stack Application (Prometheus + Grafana)                       ║
+# ║ Integrated with VictoriaMetrics for long-term storage                     ║
+# ║ DEPLOYMENT ORDER: Deploy AFTER VictoriaMetrics (sync-wave: 0)             ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+    argocd.argoproj.io/sync-wave: "0"
+    # WHY: Deploy AFTER VictoriaMetrics (which has sync-wave: -1)
+    # Ensures VictoriaMetrics is ready before Prometheus starts remote-writing
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: kube-prometheus-stack Helm chart                                 ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/monitoring/orchard
+    # WHY: This path contains:
+    # - Chart.yaml (with kube-prometheus-stack dependency)
+    # - values.yaml (with remoteWrite to VictoriaMetrics configured)
+
+    helm:
+      releaseName: monitoring
+
+      valueFiles:
+        - values.yaml
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: monitoring namespace                                        ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+    # WHY: Dedicated namespace for all monitoring components
+    # - Prometheus
+    # - Grafana
+    # - VictoriaMetrics
+    # - Alertmanager (if enabled)
+    # - Various exporters (node-exporter, kube-state-metrics)
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY                                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # WHY: kube-prometheus-stack CRDs are HUGE (>262KB)
+      # Client-side apply stores full manifest in annotations → exceeds K8s limit
+      # Server-side apply delegates to K8s API server, avoids annotation bloat
+      # FIXES: "metadata.annotations: Too long: may not be more than 262144 bytes"

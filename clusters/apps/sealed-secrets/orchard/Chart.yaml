@@ -1,0 +1,21 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Sealed Secrets Umbrella Chart for Orchard                                 ║
+# ║ Allows storing encrypted secrets in Git - only decryptable by this cluster║
+# ║ WORKFLOW: Encrypt locally with kubeseal, commit to Git, ArgoCD deploys    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v2
+name: sealed-secrets-orchard
+description: Sealed Secrets controller for encrypted secrets in Git at Homehill
+type: application
+version: 1.0.0
+appVersion: "0.27.2"
+# WHY: appVersion matches sealed-secrets controller version in chart 2.18.0
+
+dependencies:
+  - name: sealed-secrets
+    repository: https://bitnami-labs.github.io/sealed-secrets
+    version: "2.18.0"
+    # WHY: Official Bitnami Sealed Secrets Helm chart
+    # This version includes sealed-secrets controller v0.27.2 (Feb 2024)
+    # Stable, well-tested, and widely used in production
