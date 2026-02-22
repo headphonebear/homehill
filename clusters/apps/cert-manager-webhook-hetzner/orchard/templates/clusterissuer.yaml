@@ -1,7 +1,7 @@
-# WHY: Der ClusterIssuer ist die zentrale Konfiguration für Let's Encrypt.
-  # Er sagt cert-manager: "Wenn jemand ein Certificate haben will, kontaktiere
-  # Let's Encrypt und nutze DNS01 Challenge über den Hetzner Webhook."
-  # ClusterIssuer (nicht Issuer) bedeutet: Funktioniert in allen Namespaces.
+# WHY: ClusterIssuer is the central configuration for Let's Encrypt.
+# It tells cert-manager: "When someone requests a Certificate, contact
+# Let's Encrypt and use DNS01 challenge via the Hetzner webhook."
+# ClusterIssuer (not Issuer) means: works in all namespaces.
 
 ---
 apiVersion: cert-manager.io/v1
@@ -13,36 +13,39 @@ metadata:
     app.kubernetes.io/component: clusterissuer
 spec:
   acme:
-    # WHY: Let's Encrypt Production Server. Es gibt auch einen Staging Server
-    # (acme-staging-v02.api.letsencrypt.org), der keine Rate Limits hat.
-    # Staging nutzen zum Testen, Production für echte Certs!
+    # WHY: Let's Encrypt Production server. There's also a Staging server
+    # (acme-staging-v02.api.letsencrypt.org) with no rate limits.
+    # Use Staging for testing, Production for real certificates!
     server: https://acme-v02.api.letsencrypt.org/directory
 
-    # WHY: Let's Encrypt schickt Ablauf-Warnungen an diese Email.
-    # Wichtig: Sollte eine echte, überwachte Email sein!
+    # WHY: Let's Encrypt sends expiration warnings to this email.
+    # Important: Should be a real, monitored email address!
     email: admin@homehill.de
 
-    # WHY: Let's Encrypt gibt uns einen Account Key, der hier gespeichert wird.
-    # Das Secret wird automatisch von cert-manager erstellt - wir müssen es
-    # nicht manuell anlegen. Der Key ist wichtig für Certificate Renewals!
+    # WHY: Let's Encrypt issues an account key, stored here.
+    # This Secret is automatically created by cert-manager - we don't
+    # need to create it manually. The key is important for renewals!
     privateKeySecretRef:
       name: letsencrypt-key-prod
 
     solvers:
-      # WHY: DNS01 Challenge ist perfekt für Wildcard Certs und wenn Port 80
-      # nicht erreichbar ist. Let's Encrypt prüft: "Kannst du einen TXT Record
-      # in _acme-challenge.homehill.de setzen?" Wenn ja: Du besitzt die Domain!
+      # WHY: DNS01 challenge is perfect for wildcard certs and when port 80
+      # is not reachable. Let's Encrypt checks: "Can you set a TXT record
+      # at _acme-challenge.homehill.de?" If yes: You own the domain!
       - dns01:
           webhook:
-            # WHY: solverName verbindet diesen Solver mit dem Webhook Pod.
-            # Der Webhook registriert sich unter diesem Namen bei cert-manager.
+            # WHY: solverName connects this solver to the webhook Pod.
+            # The webhook registers itself with cert-manager under this name.
             solverName: hetzner
 
-            # WHY: groupName MUSS identisch mit values.yaml sein!
-            # Das ist der "Schlüssel" der Webhook und ClusterIssuer verbindet.
+            # WHY: groupName MUST match values.yaml!
+            # This is the "key" that binds webhook and ClusterIssuer together.
             groupName: acme.homehill.de
 
             config:
-              tokenSecretKeyRef:
-                name: hetzner
-                key: api-token
+              # WHY: References the Secret containing Hetzner DNS API token.
+              # The webhook uses this token to create/delete DNS TXT records
+              # for ACME DNS01 challenge validation.
+              secretName: hetzner
+              zoneName: homehill.de
+              apiUrl: https://dns.hetzner.com/api/v1
