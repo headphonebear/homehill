@@ -24,7 +24,7 @@ spec:
     repoURL: https://github.com/headphonebear/homehill.git
     # WHY: Public repo, HTTPS clone, no authentication needed
 
-    targetRevision: new_season
+    targetRevision: main
     # WHY: We're building the new cluster on the new_season branch
     # Once stable, this will be merged to main
 

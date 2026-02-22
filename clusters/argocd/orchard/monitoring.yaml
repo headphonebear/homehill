@@ -24,7 +24,7 @@ spec:
   # ╚──────────────────────────────────────────────────────────────────────────╝
   source:
     repoURL: https://github.com/headphonebear/homehill.git
-    targetRevision: new_season
+    targetRevision: main
     path: clusters/apps/monitoring/orchard
     # WHY: This path contains:
     # - Chart.yaml (with kube-prometheus-stack dependency)

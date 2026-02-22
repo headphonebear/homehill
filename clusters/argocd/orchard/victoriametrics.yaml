@@ -25,7 +25,7 @@ spec:
   # ╚──────────────────────────────────────────────────────────────────────────╝
   source:
     repoURL: https://github.com/headphonebear/homehill.git
-    targetRevision: new_season
+    targetRevision: main
     path: clusters/apps/victoriametrics/orchard
 
     helm:

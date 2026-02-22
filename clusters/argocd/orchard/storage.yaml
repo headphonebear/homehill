@@ -21,7 +21,7 @@ spec:
   # ╚──────────────────────────────────────────────────────────────────────────╝
   source:
     repoURL: https://github.com/headphonebear/homehill.git
-    targetRevision: new_season
+    targetRevision: main
     path: clusters/apps/storage/orchard
     # WHY: This path will contain:
     # - Chart.yaml (with longhorn dependency)

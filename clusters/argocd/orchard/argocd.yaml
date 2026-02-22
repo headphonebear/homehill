@@ -21,7 +21,7 @@ spec:
   # ╚──────────────────────────────────────────────────────────────────────────╝
   source:
     repoURL: https://github.com/headphonebear/homehill.git
-    targetRevision: new_season
+    targetRevision: main
     path: clusters/apps/argocd/orchard
     # WHY: This path contains Chart.yaml (with argo-cd dependency) and values.yaml
 

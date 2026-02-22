@@ -31,7 +31,7 @@ spec:
   source:
     # WHY: Using your homehill Git repo as single source of truth (GitOps!)
     repoURL: https://github.com/headphonebear/homehill.git
-    targetRevision: new_season
+    targetRevision: main
     # WHY: Path points to the directory we just created with all manifests
     path: clusters/apps/cert-manager-webhook-hetzner/orchard
 
