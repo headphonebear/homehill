@@ -43,12 +43,6 @@ spec:
             groupName: acme.homehill.de
 
             config:
-              # WHY: Hier steht, wo der Webhook den Hetzner API Token findet.
-              # Secret Name: "hetzner"
-              # Secret Key: "token"
-              # Das muss exakt mit dem SealedSecret übereinstimmen.
-              # WICHTIG: KEIN secretNamespace! Der vadimkim Webhook findet das
-              # Secret automatisch durch die RBAC Permissions.
               tokenSecretKeyRef:
                 name: hetzner
-                key: token
+                key: api-token

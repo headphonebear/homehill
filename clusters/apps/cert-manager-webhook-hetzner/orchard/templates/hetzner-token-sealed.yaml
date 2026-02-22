@@ -1,31 +1,15 @@
-# WHY: SealedSecrets sind verschlüsselte Secrets, die sicher in Git liegen können.
-  # Der sealed-secrets Controller im Cluster hat den private key und kann sie
-  # entschlüsseln. Nur der Controller kann das - niemand sonst, auch nicht jemand
-  # der Zugriff auf das Git Repo hat.
-
 ---
 apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
-  # WHY: WICHTIG! Der Name muss "hetzner" sein (nicht hetzner-dns-token),
-  # weil der ClusterIssuer nach einem Secret namens "hetzner" sucht.
-  # Das war der Bug im alten Setup - Name-Mismatch zwischen Secret und Referenz.
   creationTimestamp: null
   name: hetzner
   namespace: cert-manager
 spec:
   encryptedData:
-    # WHY: Der Key muss "token" heißen (nicht api-key), weil der ClusterIssuer
-    # nach "tokenSecretKeyRef.key: token" sucht. Name und Key müssen exakt
-    # mit der ClusterIssuer Konfiguration übereinstimmen.
-    #
-    # ACHTUNG Bear: Dieser verschlüsselte Token ist vom ALTEN Cluster!
-    # Wenn der neue Cluster einen anderen sealing-key hat, musst du das
-    # Secret neu versiegeln mit: kubeseal --cert sealing-key.crt
-    token: AgAVmvXT4cgd282dqbCY+Dvb1dO+qN8sBMbwG5Oq2+rVeNLNAg+BhaC6Q8J+udGmPU/KrWd8FzwHovYrwaXLmjLTuZjcsVEnyRQCKTqC2nRSlAwpxp5RE8xR1pNpTVeFDkpzJgPFnIXIkIVOhwQ1R72rEYrdFLpUas79XbU5w5BkOC5NSixFUOiJHX23B4YSrTPKIlrRGc4Wrz1MNcxZXOi/VutDoXrGFXqskCziDKV0a3bVKTQAiF5yrcJDCKvPoWebKz4cTGBxY3bHbRUWbhij32tCs1X3hEB4b/QZh5QVRszeq5NyTBfz/PL0tu/pnTgl2NYnAT4aGUD0ayxzAANBU9/MCkoqX8lUchEHfbg7njDSUK6U3r/o9CsZ7K4OzaanK+/mcbiKZ9iw6okIj5hx/i6c02C74755H5Me4S5OMoBC3EnKpUHpQbjh1jmir5WY0vRvT60fgdvwfVhirdiUB55aVm3+BzOkL7hXbOmGrMxsjxE9BeRNNoJ2vMXt9gk1O9NF9sA+Ybrvsvk9rD+niw+YtjvppngkDfBxsrI0qHBzSh/uTZVNcJdc5bxDYAA/Hc8gInJ04TkuP1cog2lZ3qKlT7Iurn1p6Y5CK9OeX3saDJ67fiThfwaMU31XRgTeAaSkPwIRTQSLWHa7WiDR+797leOrpFCJJdrnP0sU2JQlBibcyVFaVmpEIZETciUnHaCMXMAOcu4fQTfYjXKID0J1R9MzGPNdm6dH0L5Q3xMG4ezQM39ri/iKRObFRnvGRCbvfLTxY4WCvk1GgL4u
+    api-token: AgAA7wqcddxtK6pUzgsQY1727+ZbQSJrjZKFlU8HcYSgFD5VWpY2GnvvtMWepG+TuoAXu7Evoxl+FF8D1QXDaTNGetDI1Cdw1YnOF5qB0u32fscHnWwVGowCc0Rpudorx2lLDWvGVA0xtJA6JCD1m8AA5zpg+pfr7KlxtHtUuBg5DN0qFZn0h9/IygNXeRIp9/7PeUhv0ElNvf71M0sYGfAtGi7nyGbcIrS7Q3y2ec452JA2TeXnpIvsbPrCM2asw+QUOXlm6E/NDqI4vnF+r8B/kQ5pVmK61kD8PZZGxd0fO604wxmQQQ7jwOtT+cQ3u19KsnG1KFDd6WP3WGEFrfQtK2y5+8zINvVuH53nl/H4eMekdaIvpYnqge5We3TR5kt0hrdjL8ClXC/+h2+zYhmWLDj53wXIjLp+ijQ+k2z8L0ZCKUT31MS2WNAa0XtkmsrbFwZN/XiVdhMh/lIGLSOtgyntHNJI4YokH5SRWwnsoac/Y/XhxTUbA+jS4vrRn4TQIJYwZXam3utOxgrP+G1jYFBPmH5wSAsvIN4wkz7aHIj+eFXG1IfezJ5THm3ZHM9U2YAnz3rcWDY6q+bDqU7K1vMtKeUAnGdpHfkr+zbMuR++SxKfOAGn4V2PL2fh68pRUprb0SAJz+zvI7+ip7vL0h/7u+elmZGHJSKeV1UDDVMHB8qqrtxZ4HHqxtGeepT2nrPp/tRfZEqJB3tJLNlnTvg+sfLfARl5U7mtC68SfYcsLBmhuOWCPzkFDJ6Ry14RItl53z9eO8ZvriT9n26w
   template:
     metadata:
       creationTimestamp: null
       name: hetzner
       namespace: cert-manager
-    type: Opaque
