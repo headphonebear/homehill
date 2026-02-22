@@ -186,9 +186,9 @@ kube-prometheus-stack:
     # TODO: Enable later when you want notifications
     # You'll need to configure receivers (where alerts go)
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔──────────────────────────────────────────────────────────────────────════╗
   # ║ k3s Control Plane Monitoring (Disabled)                                  ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚══════════════════════════════════════════════════════════════════════════╝
 
   # WHY: k3s embeds control plane components in the main k3s binary
   # They don't run as separate Pods, so Prometheus can't scrape them like in kubeadm
@@ -210,11 +210,20 @@ kube-prometheus-stack:
     enabled: false
     # WHY: k3s doesn't use kube-proxy by default (uses eBPF or iptables internally)
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ╔══════════════════════════════════════════════════════════════════════════╗
   # ║ Prometheus Operator Configuration                                        ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # ╚══════════════════════════════════════════════════════════════════════════╝
 
   prometheusOperator:
+    admissionWebhooks:
+      enabled: false
+      # WHY: Webhooks validate Prometheus/Alertmanager/ServiceMonitor CRs
+      # They require valid TLS certificates (usually from cert-manager)
+      # Without proper certs, operator logs fill with TLS handshake errors
+      # For homelab: validation is nice-to-have but not critical
+      # BENEFIT: Clean operator logs, faster bootstrap, no cert dependency
+      # TRADE-OFF: Invalid CRs won't be caught at admission time (will fail at reconcile)
+
     resources:
       requests:
         cpu: 200m
@@ -292,4 +301,3 @@ kube-prometheus-stack:
 # - Most dashboards query last 1-24 hours → served from Prometheus (fast)
 # - Historical analysis (weeks/months ago) → served from VictoriaMetrics
 # - Grafana automatically picks the right data source based on time range
-
