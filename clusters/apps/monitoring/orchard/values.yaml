@@ -112,6 +112,11 @@ kube-prometheus-stack:
     enabled: true
     # WHY: Grafana is the primary UI for viewing metrics
 
+    replicas: 1
+    # WHY: Grafana uses ReadWriteOnce PVC, cannot run multiple replicas
+    # Helm chart default is 2, but we only have 1 PVC that can't be shared
+    # For HA Grafana, would need ReadWriteMany storage or external DB
+
     # adminPassword: "changeme-after-first-login"
     # WHY: Comment out to generate random password
     # kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 -d
@@ -186,7 +191,7 @@ kube-prometheus-stack:
     # TODO: Enable later when you want notifications
     # You'll need to configure receivers (where alerts go)
 
-  # ╔──────────────────────────────────────────────────────────────────────════╗
+  # ╔──────────────────────────────────────────────────────────────────────────╗
   # ║ k3s Control Plane Monitoring (Disabled)                                  ║
   # ╚══════════════════════════════════════════════════════════════════════════╝
 
