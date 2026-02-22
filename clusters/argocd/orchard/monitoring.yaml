@@ -59,4 +59,8 @@ spec:
 
     syncOptions:
       - CreateNamespace=true
-
+      - ServerSideApply=true
+      # WHY: kube-prometheus-stack CRDs are HUGE (>262KB)
+      # Client-side apply stores full manifest in annotations → exceeds K8s limit
+      # Server-side apply delegates to K8s API server, avoids annotation bloat
+      # FIXES: "metadata.annotations: Too long: may not be more than 262144 bytes"
