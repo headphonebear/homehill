@@ -178,6 +178,7 @@ traefik:
 
     kubernetesCRD:
       enabled: true
+      allowCrossNamespace: true
       # WHY: Enable Traefik CRDs (IngressRoute, Middleware, TLSOption, etc.)
       # This is the recommended way to configure Traefik
       # More powerful than standard Ingress (supports TCP/UDP, middlewares, etc.)
@@ -188,7 +189,6 @@ traefik:
 
   additionalArguments:
     - "--serverstransport.insecureskipverify=true"
-    - "--providers.kubernetescrd.allowcrossnamespaceingresses=true"
     # WHY: Allow Traefik to connect to backends with self-signed certificates
     # Useful for internal services that don't have proper certs yet
     # WARNING: Only use in homelab, not in production!
