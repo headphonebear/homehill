@@ -4,7 +4,7 @@
 # ║                                                                            ║
 # ║ IMPORTANT NOTES:                                                           ║
 # ║ - This config is for the PUBLIC homehill repo (no SSH keys needed)         ║
-# ║ - Domain: argocd.orchard.homehill.de (with real DNS + LetsEncrypt)         ║
+# ║ - Domain: argocd.homehill.de (with real DNS + LetsEncrypt)         ║
 # ║ - Ingress disabled initially (access via port-forward during bootstrap)    ║
 # ║ - Traefik ingress will be added later via ArgoCD itself                    ║
 # ╚════════════════════════════════════════════════════════════════════════════╝

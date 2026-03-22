@@ -437,7 +437,7 @@ kubectl get clusterissuer
 kubectl get pods -n cert-manager -l app.kubernetes.io/name=cert-manager-webhook-hetzner
 ```
 
-Once Traefik and certificates are ready, ArgoCD will be accessible at: `https://argocd.orchard.homehill.de`
+Once Traefik and certificates are ready, ArgoCD will be accessible at: `https://argocd.homehill.de`
 
 Stop the port-forward (Ctrl+C) and use the HTTPS URL instead.
 
