@@ -1,0 +1,44 @@
+# clusters/apps/argocd/orchard/templates/ingressroute.yaml
+
+---
+# HTTP → HTTPS Redirect
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-http
+  namespace: argocd
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`argocd.orchard.homehill.de`)
+      kind: Rule
+      services:
+        - name: argocd-server
+          port: 80
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+
+---
+# HTTPS
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-https
+  namespace: argocd
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`argocd.orchard.homehill.de`)
+      kind: Rule
+      services:
+        - name: argocd-server
+          port: 443
+      middlewares:
+        - name: security-headers
+          namespace: traefik
+  tls:
+    secretName: homehill-wildcard-tls
+    # WHY: Wildcard cert from default namespace – musst be copied over!
