@@ -12,7 +12,7 @@ metadata:
   # WHY: Certificates are namespace-bound. Default namespace is good for
   # cluster-wide wildcard certs used by many apps.
   # Traefik can read Secrets from other namespaces (with RBAC).
-  namespace: default
+  namespace: traefik
   labels:
     app.kubernetes.io/name: cert-manager-webhook-hetzner
     app.kubernetes.io/component: certificate
