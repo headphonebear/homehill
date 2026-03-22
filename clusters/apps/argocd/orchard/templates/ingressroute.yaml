@@ -39,4 +39,6 @@ spec:
       middlewares:
         - name: security-headers
           namespace: traefik
-  tls: {}
+  tls:
+    store:
+      name: default
