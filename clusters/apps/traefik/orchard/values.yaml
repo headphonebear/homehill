@@ -226,15 +226,6 @@ traefik-crds:
   #               TLSOption, TLSStore, TraefikService, ServersTransport
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ Wildcard certificate as default TLS cert                                   ║
-# ╚════════════════════════════════════════════════════════════════════════════╝
-
-tlsStore:
-  default:
-    defaultCertificate:
-      secretName: homehill-wildcard-tls
-
-# ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ NOTES & TODO                                                               ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 

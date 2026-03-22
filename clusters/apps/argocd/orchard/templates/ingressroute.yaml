@@ -11,7 +11,7 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`argocd.orchard.homehill.de`)
+    - match: Host(`argocd.homehill.de`)
       kind: Rule
       services:
         - name: argocd-server
