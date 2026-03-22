@@ -39,6 +39,8 @@ spec:
   dnsNames:
     - "*.homehill.de"  # WHY: Matches foo.homehill.de, bar.homehill.de, etc.
     - "homehill.de"    # WHY: Matches the root domain
+    - "*.orchard.homehill.de"
+    - "*.mk3.homehill.de"
 
   # WHY: Let's Encrypt certs are valid for 90 days. Cert-manager renews
   # automatically 30 days before expiration (2/3 of lifetime). renewBefore
