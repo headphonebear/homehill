@@ -48,6 +48,9 @@ argo-cd:
   # ╚────────────────────────────────────────────────────────────────────────╝
 
   configs:
+    params:
+      server.insecure: true
+
     cm:
       # WHY: This tells ArgoCD where to find the Git repository for syncing
       # The homehill repo is PUBLIC, so no authentication is needed
