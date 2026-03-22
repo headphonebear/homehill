@@ -174,7 +174,7 @@ argo-cd:
   server:
     # WHY: Run in secure mode (require HTTPS)
     # Set to 'true' only if terminating TLS outside ArgoCD (e.g., at Traefik)
-    insecure: false
+    insecure: true
 
     service:
       # WHY: ClusterIP (internal only) - we'll expose via Ingress later
