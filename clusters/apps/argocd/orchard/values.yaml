@@ -155,6 +155,7 @@ argo-cd:
 
   params:
     application.instanceLabelKey: argocd.argoproj.io/instance
+    server.insecure: true
     # WHY: This label is used to track which Application owns which resources
     # Essential for ArgoCD's garbage collection and pruning
 
