@@ -39,6 +39,4 @@ spec:
       middlewares:
         - name: security-headers
           namespace: traefik
-  tls:
-    secretName: homehill-wildcard-tls
-    # WHY: Wildcard cert from default namespace – musst be copied over!
+  tls: {}
