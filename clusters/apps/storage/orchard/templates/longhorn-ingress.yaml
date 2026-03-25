@@ -35,19 +35,4 @@ spec:
         - name: longhorn-frontend
           port: 80
   tls:
-    secretName: longhorn-tls
-
----
-# cert-manager Certificate
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: longhorn-tls
-  namespace: longhorn-system
-spec:
-  secretName: longhorn-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  dnsNames:
-    - longhorn.homehill.de
+    secretName: homehill-wildcard-tls
