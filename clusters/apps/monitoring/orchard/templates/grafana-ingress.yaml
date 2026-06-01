@@ -1,0 +1,37 @@
+---
+# IngressRoute: HTTP → HTTPS Redirect
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana-http
+  namespace: monitoring
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`grafana.homehill.de`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+      services:
+        - name: monitoring-grafana
+          port: 80
+---
+# IngressRoute: HTTPS
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana-https
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`grafana.homehill.de`)
+      kind: Rule
+      services:
+        - name: monitoring-grafana
+          port: 80
+  tls:
+    secretName: homehill-wildcard-tls
