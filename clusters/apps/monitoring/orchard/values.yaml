@@ -122,6 +122,9 @@ kube-prometheus-stack:
     # kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 -d
     # TODO: Use SealedSecret to store it securely in Git
 
+    deploymentStrategy:
+      type: Recreate
+
     persistence:
       enabled: true
       storageClassName: longhorn
