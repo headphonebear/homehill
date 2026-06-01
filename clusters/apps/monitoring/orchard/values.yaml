@@ -124,6 +124,16 @@ kube-prometheus-stack:
 
     deploymentStrategy:
       type: Recreate
+      # WHY: Grafana uses a ReadWriteOnce PVC (Longhorn) that can only attach to ONE
+      # pod at a time. The default 'RollingUpdate' starts the new pod BEFORE the old
+      # one is gone -> both want the same PVC -> Multi-Attach error, new pod stuck in Init.
+      # 'Recreate' shuts down the old pod first, then starts the new one. No conflict.
+      #
+      # GOTCHA: An existing Deployment can NOT be switched in-place from RollingUpdate
+      # to Recreate (apply fails: "rollingUpdate may not be specified when strategy
+      # type is 'Recreate'"). One-time fix:
+      #   kubectl delete deployment monitoring-grafana -n monitoring
+      # ArgoCD recreates it cleanly with Recreate. The PVC (dashboards/settings) survives.
 
     persistence:
       enabled: true
