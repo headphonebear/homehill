@@ -117,10 +117,15 @@ kube-prometheus-stack:
     # Helm chart default is 2, but we only have 1 PVC that can't be shared
     # For HA Grafana, would need ReadWriteMany storage or external DB
 
-    # adminPassword: "changeme-after-first-login"
-    # WHY: Comment out to generate random password
-    # kubectl get secret -n monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 -d
-    # TODO: Use SealedSecret to store it securely in Git
+    admin:
+      existingSecret: monitoring-grafana
+      userKey: admin-user
+      passwordKey: admin-password
+    # WHY: Admin-Credentials kommen aus dem SealedSecret 'monitoring-grafana'
+    # (siehe grafana-admin-sealedsecret.yaml). Der Sealed-Secrets-Controller
+    # entschluesselt es im Cluster; das Chart erzeugt KEIN eigenes Zufallspasswort mehr.
+    # Passwort liegt zusaetzlich in Vaultwarden (Quelle der Wahrheit).
+    # Key-Namen (admin-user/admin-password) sind verifiziert gegen das Deployment.
 
     deploymentStrategy:
       type: Recreate
