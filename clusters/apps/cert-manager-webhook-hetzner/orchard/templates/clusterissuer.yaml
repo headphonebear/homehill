@@ -43,9 +43,15 @@ spec:
             groupName: acme.homehill.de
 
             config:
-              # WHY: References the Secret containing Hetzner DNS API token.
-              # The webhook uses this token to create/delete DNS TXT records
-              # for ACME DNS01 challenge validation.
-              secretName: hetzner
-              zoneName: homehill.de
-              apiUrl: https://api.hetzner.cloud/v1
+              # WHY: The OFFICIAL Hetzner webhook (hetzner/cert-manager-webhook-
+              # hetzner) expects the token via tokenSecretKeyRef (name + key) —
+              # NOT the vadimkim-style secretName/zoneName/apiUrl. Feeding it the
+              # wrong schema makes the webhook read an EMPTY secret name, and
+              # cert-manager fails DNS01 Present with "resource name may not be
+              # empty" (the whole cert stays stuck, silently, until renewal).
+              # The DNS zone is auto-discovered via the Hetzner Cloud API, so
+              # zoneName/apiUrl are not needed here.
+              # key: api-token matches the existing 'hetzner' SealedSecret key.
+              tokenSecretKeyRef:
+                name: hetzner
+                key: api-token
