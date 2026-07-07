@@ -53,9 +53,9 @@ argocd app sync traefik
 ### Active Cluster: **Orchard** 🍎
 
 **Nodes:**
-- `apple` (control-plane) - HP EliteDesk 800 G2
-- `plum` (worker) - HP EliteDesk 800 G2  
-- `peach` (worker) - HP EliteDesk 800 G2
+- `apple` (control-plane) - GMKtec Nucbox G3 Plus (N150, 16GB RAM, 1TB SSD)
+- `lemon` (worker) - GMKtec Nucbox G3 Plus (N150, 16GB RAM, 1TB SSD)
+- `plum` (worker) - GMKtec Nucbox G3 Plus (N150, 16GB RAM, 1TB SSD)
 
 **Core Stack:**
 
@@ -90,7 +90,7 @@ argocd app sync traefik
    ┌──────────────────────────────────────────────┐
    │          Longhorn (HA Storage)               │
    │  ┌─────────┐  ┌─────────┐  ┌─────────┐     │
-   │  │  apple  │  │  plum   │  │  peach  │     │
+   │  │  apple  │  │  lemon  │  │  plum   │     │
    │  └─────────┘  └─────────┘  └─────────┘     │
    └──────────────────────────────────────────────┘
 ```
