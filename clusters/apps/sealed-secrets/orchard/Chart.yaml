@@ -14,8 +14,16 @@ appVersion: "0.27.2"
 
 dependencies:
   - name: sealed-secrets
-    repository: https://bitnami-labs.github.io/sealed-secrets
+    repository: https://bitnami.github.io/sealed-secrets
     version: "2.18.0"
     # WHY: Official Bitnami Sealed Secrets Helm chart
     # This version includes sealed-secrets controller v0.27.2 (Feb 2024)
     # Stable, well-tested, and widely used in production
+    #
+    # WHY the repo URL changed (2026-06-15): Bitnami moved the project from the
+    # `bitnami-labs` org to `bitnami`. Git redirects work, but GitHub Pages does
+    # NOT redirect — so the old `bitnami-labs.github.io/sealed-secrets` index.yaml
+    # returns a hard 404, which made ArgoCD stall on ComparisonError while the
+    # already-running controller kept decrypting fine. Chart 2.18.0 still exists
+    # at the new URL; we deliberately did NOT bump (never stop a running system).
+    # Ref: github.com/bitnami/sealed-secrets/issues/1982
