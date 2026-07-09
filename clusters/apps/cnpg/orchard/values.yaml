@@ -1,0 +1,38 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ CloudNativePG Operator — values                                          ║
+# ║ Values are keyed under the dependency name `cloudnative-pg`.              ║
+# ║ We lean on chart defaults; only homelab-relevant knobs are set here.      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+cloudnative-pg:
+  # ── Operator replicas ──────────────────────────────────────────────────────
+  replicaCount: 1
+  # WHY: A single operator replica is plenty for a 3-node homelab. The operator
+  # is a control-plane controller, not on the data path — if its pod restarts,
+  # running Postgres clusters keep serving. HA operator (2+) buys us nothing here
+  # and would just burn RAM on the N150 nodes.
+
+  # ── CRDs ────────────────────────────────────────────────────────────────────
+  crds:
+    create: true
+    # WHY: Let the chart install/manage the CNPG CRDs. Note: these CRDs are large
+    # — see the ServerSideApply syncOption on the Application manifest, same class
+    # of "exceeds the 262KB client-side annotation limit" problem as monitoring.
+
+  # ── Metrics ─────────────────────────────────────────────────────────────────
+  monitoring:
+    podMonitorEnabled: false
+    # WHY: This toggles a PodMonitor for the OPERATOR itself. We keep it off for
+    # now — the metrics that matter are per-database, configured on each `Cluster`
+    # CR (memos will enable its own). Revisit if we want operator-level dashboards.
+
+  # ── Resources ───────────────────────────────────────────────────────────────
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      memory: 200Mi
+    # WHY: The controller is lightweight. Modest requests keep it honest on the
+    # 16GB nodes; a memory limit (no CPU limit, to avoid throttling reconciles)
+    # guards against runaway growth.

@@ -1,0 +1,25 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ CloudNativePG Operator Umbrella Chart for Orchard                         ║
+# ║ The PostgreSQL operator — turns `Cluster` CRs into managed PG instances    ║
+# ║ ARCHITECTURE: Operator only. Individual databases are separate `Cluster`   ║
+# ║               CRs living in each consuming app (e.g. memos).               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v2
+name: cnpg-orchard
+description: CloudNativePG operator for declarative PostgreSQL at Homehill
+type: application
+version: 1.0.0
+appVersion: "1.30.0"
+# WHY: appVersion matches the CloudNativePG operator shipped in chart 0.29.0
+
+dependencies:
+  - name: cloudnative-pg
+    repository: https://cloudnative-pg.github.io/charts
+    version: "0.29.0"
+    # WHY: Official CloudNativePG operator Helm chart (operator v1.30.0).
+    # This deploys ONLY the operator + CRDs (Cluster, Backup, ScheduledBackup,
+    # Pooler, ...). Actual databases are declared elsewhere as `Cluster` CRs.
+    # WHY CNPG over a hand-rolled Postgres Deployment: declarative HA, rolling
+    # updates, Prometheus metrics, and — the reason that matters here — native
+    # continuous backups (WAL archiving + PITR) to S3 / Hetzner Object Storage.

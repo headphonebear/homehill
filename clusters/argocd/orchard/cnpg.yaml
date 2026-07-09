@@ -1,0 +1,62 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ CloudNativePG Operator Application                                        ║
+# ║ The PostgreSQL operator for Orchard — foundation for all DB-backed apps    ║
+# ║ DEPLOYMENT ORDER: sync-wave -2, BEFORE any app that declares a `Cluster`   ║
+# ║                   CR (its CRDs must exist first). Also before victoria-     ║
+# ║                   metrics (-1) — harmless, operator has no dependencies.    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+    argocd.argoproj.io/sync-wave: "-2"
+    # WHY: Operator + CRDs must be in place before any `Cluster` CR is applied.
+    # Wave -2 puts it ahead of victoriametrics (-1) and everything at wave 0.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SOURCE: CloudNativePG operator umbrella chart                            ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/cnpg/orchard
+
+    helm:
+      releaseName: cnpg
+
+      valueFiles:
+        - values.yaml
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ DESTINATION: cnpg-system namespace (CNPG convention)                     ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+    # WHY: cnpg-system is the operator's conventional home. Databases (`Cluster`
+    # CRs) live in their own app namespaces, not here.
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ SYNC POLICY                                                               ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      # WHY: The operator is stateless (a controller + CRDs), so selfHeal is safe
+      # here — unlike the stateful RWO-PVC apps (monitoring). No Multi-Attach risk.
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # WHY ServerSideApply: the CNPG CRDs are large and exceed the 262KB
+      # client-side annotation limit — same reason monitoring needs it. Without
+      # this, the initial CRD apply fails with "metadata.annotations: Too long".
