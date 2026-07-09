@@ -27,7 +27,7 @@ backup:
 
 # ── Memos application ─────────────────────────────────────────────────────────
 app:
-  enabled: false
+  enabled: true
   # ╔══════════════════════════════════════════════════════════════════════════╗
   # ║ CUTOVER GATE — read before flipping!                                     ║
   # ║ Starts `false` for the initial migration. memos auto-creates its schema   ║
