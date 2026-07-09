@@ -1,0 +1,51 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos Application                                                         ║
+# ║ Self-hosted notes, migrated off the legacy Swarm. Bundles the CNPG          ║
+# ║ database, its S3-backup SealedSecret, the NFS media PV/PVC, and (gated on    ║
+# ║ app.enabled) the memos Deployment/Service/IngressRoute.                     ║
+# ║                                                                            ║
+# ║ DEPLOY ORDER: needs the cnpg operator (wave -2) for its CRDs. This app is   ║
+# ║ default wave 0. CUTOVER: first sync with app.enabled=false (DB + infra),    ║
+# ║ pg_restore the swarm data, verify, then flip app.enabled=true and re-sync.  ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: memos
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/memos/orchard
+
+    helm:
+      releaseName: memos
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: memos
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+      # WHY selfHeal:false — this app is stateful (CNPG Postgres + irreplaceable
+      # notes). We want deliberate, manual `argocd app sync` here, especially
+      # during/after the migration — no auto-reconcile surprises on a database.
+      # Same caution class as the monitoring app.
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # WHY ServerSideApply: the app declares a CNPG `Cluster` CR; SSA keeps us
+      # clear of the client-side annotation-size limit and plays nicely with the
+      # operator's own field ownership on the resource.

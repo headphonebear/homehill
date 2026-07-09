@@ -1,0 +1,87 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos PostgreSQL — CloudNativePG Cluster + ScheduledBackup                ║
+# ║ Single-instance PG for memos, with continuous WAL archiving + daily base   ║
+# ║ backups to Hetzner Object Storage (bucket `bearbackups`).                   ║
+# ║                                                                            ║
+# ║ MIGRATION NOTE: this Cluster is created EMPTY (bootstrap.initdb). The       ║
+# ║ swarm data is loaded afterwards via `pg_dump | pg_restore` (the swarm PG    ║
+# ║ lives on a Docker overlay net the cluster can't reach — a declarative       ║
+# ║ initdb.import would need it exposed, not worth it for a one-time move).      ║
+# ║ Deploy order: Cluster up → restore data → THEN deploy the memos app, so     ║
+# ║ memos never sees an empty DB and offers a fresh setup screen.               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.database.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: 1
+  # WHY: One instance. HA is a later upgrade (bump instances + move to local-path
+  # storage to avoid replication²). Durability today = Longhorn + S3 backups.
+
+  # WHY no imageName: use the operator's default PostgreSQL image
+  # (ghcr.io/cloudnative-pg/postgresql — notably NOT a bitnami image, so the
+  # whole Docker Hub sunset saga doesn't touch us here). A pg_dump from the
+  # older swarm PG restores cleanly into CNPG's newer major.
+
+  storage:
+    size: {{ .Values.database.storageSize }}
+    storageClass: {{ .Values.database.storageClass }}
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+    # WHY: memos is a two-person notes app — this DB idles. Modest requests,
+    # a memory limit as a guardrail, no CPU limit (don't throttle checkpoints).
+
+  # ── Bootstrap: create an EMPTY database + owner role ────────────────────────
+  bootstrap:
+    initdb:
+      database: memos
+      owner: memos
+      # WHY: CNPG creates db `memos` owned by role `memos` and auto-generates the
+      # password into secret `{{ .Values.database.name }}-app`. The step-3 memos
+      # Deployment reads its DSN from there — a brand-new password, so the old
+      # swarm secret is irrelevant going forward.
+
+  # ── Continuous backup to Hetzner Object Storage (in-tree Barman) ────────────
+  backup:
+    retentionPolicy: {{ .Values.backup.retention | quote }}
+    barmanObjectStore:
+      destinationPath: {{ .Values.backup.destinationPath | quote }}
+      endpointURL: {{ .Values.backup.endpointURL | quote }}
+      s3Credentials:
+        accessKeyId:
+          name: memos-db-s3-backup
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: memos-db-s3-backup
+          key: ACCESS_SECRET_KEY
+        # WHY: references the SealedSecret in this namespace (s3-backup-sealedsecret.yaml).
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+      # WHY in-tree barmanObjectStore (not the new plugin): it works on operator
+      # 1.30 and avoids running a second component. Migrating to the barman-cloud
+      # plugin is a deliberate later phase, not a blocker.
+---
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Daily base backup — WAL archiving already runs continuously; this pins a    ║
+# ║ fresh base each night so restores/PITR stay fast and retention can prune.   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ .Values.database.name }}-daily
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "0 0 3 * * *"
+  # WHY: 6-field CNPG cron (leading seconds field). 03:00 nightly — quiet hours.
+  backupOwnerReference: self
+  cluster:
+    name: {{ .Values.database.name }}

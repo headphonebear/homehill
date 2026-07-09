@@ -1,0 +1,22 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos Umbrella Chart for Orchard                                          ║
+# ║ Self-hosted notes — migrated off the legacy Swarm (was memos.homehill.de)  ║
+# ║ ARCHITECTURE: No upstream Helm chart exists for memos; everything lives in  ║
+# ║               templates/ as plain manifests:                               ║
+# ║                 - database.yaml  → CNPG Cluster + ScheduledBackup (PG)      ║
+# ║                 - s3-backup-sealedsecret.yaml → S3 creds for CNPG backups   ║
+# ║                 - (step 3) Deployment/Service/IngressRoute/NFS PV for app   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v2
+name: memos-orchard
+description: Memos self-hosted notes at Homehill, backed by CloudNativePG
+type: application
+version: 1.0.0
+appVersion: "TBD"
+# WHY: appVersion (the memos image tag) is pinned in step 3 when the Deployment
+# is added. The Swarm ran `ghcr.io/usememos/memos:latest` — we deliberately pin
+# a concrete tag on Orchard instead of chasing :latest.
+
+# WHY no dependencies: memos ships only a container image, not a Helm chart.
+# This is a pure "local manifests" umbrella, so there is no Chart.lock to commit.

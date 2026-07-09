@@ -1,0 +1,52 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos media storage — reuse the EXISTING NFS export from the swarm         ║
+# ║ Same bytes the swarm used: forest.homehill.de:/nfs/memos/memos-svc         ║
+# ║ (WD MyCloud, NFSv3). No data copy — we just re-mount it from Orchard.       ║
+# ║                                                                            ║
+# ║ SAFETY: reclaimPolicy Retain + ArgoCD Prune=false/Delete=false so neither  ║
+# ║ a PVC delete nor an app prune can ever reap Frau Bear's uploaded media.     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: memos-media-nfs
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    # WHY: belt-and-suspenders — ArgoCD must never delete this PV. The data on
+    # the NAS is irreplaceable; the PV is just a pointer to it.
+spec:
+  capacity:
+    storage: {{ .Values.app.mediaSize }}
+  accessModes:
+    - ReadWriteMany
+    # WHY: NFS is naturally RWX. memos is single-replica so RWO would do, but RWX
+    # keeps the door open and matches NFS semantics.
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  # WHY: static PV, no dynamic provisioner (this is NOT Longhorn).
+  mountOptions:
+    - nfsvers=3
+    - nolock
+    - soft
+    # WHY: mirrors the swarm mount opts (WD MyCloud speaks NFSv3; nolock/soft
+    # avoid hangs if the NAS blips).
+  nfs:
+    server: forest.homehill.de
+    path: /nfs/memos/memos-svc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: memos-media
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: memos-media-nfs
+  # WHY: bind explicitly to the static PV above (no storageclass matching).
+  resources:
+    requests:
+      storage: {{ .Values.app.mediaSize }}

@@ -1,0 +1,19 @@
+{{- if .Values.app.enabled }}
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos Service — ClusterIP, the upstream the IngressRoute points at         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: memos
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: memos
+spec:
+  selector:
+    app: memos
+  ports:
+    - name: http
+      port: 5230
+      targetPort: 5230
+{{- end }}

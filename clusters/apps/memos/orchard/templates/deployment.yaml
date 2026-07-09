@@ -1,0 +1,77 @@
+{{- if .Values.app.enabled }}
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos application Deployment                                              ║
+# ║ Gated on .Values.app.enabled — see the CUTOVER GATE note in values.yaml.    ║
+# ║ DSN comes from the CNPG-generated secret `<database.name>-app` (key `uri`), ║
+# ║ so memos gets a brand-new password; the old swarm secret is irrelevant.     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memos
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: memos
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+    # WHY: single-instance app. Recreate avoids two memos pods briefly sharing
+    # the media mount / talking to one DB during a rollout — clean and simple.
+  selector:
+    matchLabels:
+      app: memos
+  template:
+    metadata:
+      labels:
+        app: memos
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.app.uid }}
+        runAsGroup: {{ .Values.app.uid }}
+        fsGroup: {{ .Values.app.uid }}
+        # WHY: UID 7001 (memos-svc) matches the NFS file ownership on the WD
+        # MyCloud — the swarm ran memos as 7001:7001 too. Keep it identical or
+        # the mounted media becomes unreadable/unwritable.
+      containers:
+        - name: memos
+          image: {{ .Values.app.image }}
+          ports:
+            - containerPort: 5230
+          env:
+            - name: MEMOS_MODE
+              value: prod
+            - name: MEMOS_PORT
+              value: "5230"
+            - name: MEMOS_DATA
+              value: /var/opt/memos
+            - name: MEMOS_DRIVER
+              value: postgres
+            - name: MEMOS_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.name }}-app
+                  key: uri
+                  # WHY: CNPG writes a ready-made connection URI into this secret.
+                  # If in-cluster TLS negotiation ever gets fussy, switch to
+                  # composing the DSN from parts with sslmode=disable.
+          volumeMounts:
+            - name: media
+              mountPath: /var/opt/memos
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5230
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5230
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: memos-media
+{{- end }}

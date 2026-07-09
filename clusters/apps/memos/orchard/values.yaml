@@ -1,0 +1,50 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos — values                                                           ║
+# ║ Config knobs for the local templates.                                     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ── PostgreSQL (CloudNativePG) ────────────────────────────────────────────────
+database:
+  name: memos-db
+  # WHY: CNPG derives resource names from this. The app connection service is
+  # `<name>-rw` (memos-db-rw), and the generated app-user credentials land in
+  # the secret `<name>-app` (memos-db-app). The app below reads its DSN from there.
+  storageSize: 5Gi
+  # WHY: memos data is text-light; the swarm DB is tiny. 5Gi leaves generous
+  # headroom on Longhorn and is trivial to expand later.
+  storageClass: longhorn
+  # WHY: Single-instance CNPG, so Longhorn's block replication IS our in-cluster
+  # redundancy (no replication² problem — that only bites at multi-instance HA).
+  # Durability beyond the cluster comes from the S3 backups below.
+
+# ── S3 backup target (Hetzner Object Storage) ─────────────────────────────────
+backup:
+  destinationPath: s3://bearbackups/orchard/memos
+  # WHY: Shared bucket `bearbackups`, namespaced by a per-app prefix so future
+  # DBs (vaultwarden, ...) can share the bucket without colliding.
+  endpointURL: https://hel1.your-objectstorage.com
+  retention: "30d"
+
+# ── Memos application ─────────────────────────────────────────────────────────
+app:
+  enabled: false
+  # ╔══════════════════════════════════════════════════════════════════════════╗
+  # ║ CUTOVER GATE — read before flipping!                                     ║
+  # ║ Starts `false` for the initial migration. memos auto-creates its schema   ║
+  # ║ on first start against an EMPTY database — if that happens before we      ║
+  # ║ pg_restore the swarm data, the restore collides with existing tables.     ║
+  # ║ SEQUENCE:  push (enabled:false) → DB comes up empty → pg_restore swarm    ║
+  # ║ data → verify every note is present → set enabled:true → push → memos     ║
+  # ║ starts on the restored data. After cutover this stays `true` forever.     ║
+  # ╚══════════════════════════════════════════════════════════════════════════╝
+  image: ghcr.io/usememos/memos:0.29.1
+  # WHY: pinned, not :latest (the swarm chased :latest — we don't). 0.29.1 is
+  # the current stable as of the migration.
+  host: memos.homehill.de
+  # WHY: same hostname as the swarm, so bookmarks/clients keep working after DNS
+  # points here. Flat subdomain — no multi-level (Hetzner DNS-01 quirk).
+  uid: 7001
+  # WHY: memos-svc from the Homehill UID schema (7000–7999 Service Goblins).
+  # Must match the NFS file ownership on the WD MyCloud (permission mapping).
+  mediaSize: 20Gi
+  # WHY: capacity is a formality for NFS (the NAS export governs real size).
