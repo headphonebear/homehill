@@ -4,7 +4,9 @@
 
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    # WHY gepinnt statt :latest – Reproduzierbarkeit ("Naked OS"): ein Redeploy
+    # zieht immer exakt diese Version, kein stiller Versionssprung beim Poll.
+    image: qdrant/qdrant:v1.18.2
     container_name: qdrant
     restart: unless-stopped
 
