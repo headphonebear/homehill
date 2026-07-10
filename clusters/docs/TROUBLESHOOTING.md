@@ -222,6 +222,138 @@ kubectl -n <namespace> logs <pod-name> --previous
 
 ---
 
+## 📊 `kubectl top` Fails — Metrics API Not Available
+
+### Symptoms
+
+```bash
+kubectl top nodes
+error: Metrics API not available
+# or:
+Error from server (ServiceUnavailable): the server is currently unable to
+handle the request (get nodes.metrics.k8s.io)
+```
+
+The aggregated metrics API is down:
+
+```bash
+kubectl get apiservice v1beta1.metrics.k8s.io
+NAME                     SERVICE                      AVAILABLE   AGE
+v1beta1.metrics.k8s.io   kube-system/metrics-server   False (MissingEndpoints)   139d
+```
+
+**Note:** Orchard's metrics-server is the **K3s-bundled** one (namespace `kube-system`,
+managed by the K3s addon deployer — *not* ArgoCD). This is separate from
+kube-state-metrics and VictoriaMetrics, which keep working regardless.
+
+### Root Cause
+
+The confusing part: everything *below* the API service can be perfectly healthy —
+
+```bash
+# Pod is Running and Ready, serving on :10250
+kubectl -n kube-system get pods -l k8s-app=metrics-server -o wide
+
+# EndpointSlice has a ready address with port name "https"
+kubectl -n kube-system get endpointslice -l kubernetes.io/service-name=metrics-server \
+  -o jsonpath='{range .items[*]}{.metadata.name}{" ready="}{.endpoints[*].conditions.ready}{" port="}{.ports[*].name}{"\n"}{end}'
+# → metrics-server-xxxxx ready=true port=https
+
+# Legacy Endpoints object is also current (points to the live pod)
+kubectl -n kube-system get endpoints metrics-server -o yaml
+```
+
+...yet the APIService still reports `MissingEndpoints: ... have no addresses with
+port name "https"`. The cluster data is correct in **both** EndpointSlice *and*
+legacy Endpoints — the kube-apiserver's **aggregation availability controller** is
+wedged with a stale internal view and won't re-reconcile. This is a transient
+apiserver glitch (seen after a metrics-server pod migrating between nodes), **not**
+a config error you can fix in Git/Helm.
+
+Tell-tale sign it's the aggregation layer and not the pod: a raw proxy to the pod
+fails while the pod itself is Ready —
+
+```bash
+kubectl get --raw '/apis/metrics.k8s.io/v1beta1/nodes'
+# Error from server (ServiceUnavailable): ...
+```
+
+### Fix: Recreate the APIService Object (light — try first)
+
+Bouncing the pod does **not** help (the wedge is one layer up). Recreating the
+APIService gives the availability controller a *fresh* object to evaluate against
+the (correct) endpoints, which clears the stale view:
+
+```bash
+kubectl delete apiservice v1beta1.metrics.k8s.io
+
+# ⚠️ K3s does NOT auto-recreate it: the addon deployer only re-applies a manifest
+# when its file checksum changes or K3s restarts — it does not reconcile a deleted
+# child object in real time (unlike ArgoCD selfHeal). So re-apply it yourself:
+
+kubectl apply -f - <<'EOF'
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.metrics.k8s.io
+  labels:
+    kubernetes.io/cluster-service: "true"
+    kubernetes.io/name: "Metrics-server"
+spec:
+  service:
+    name: metrics-server
+    namespace: kube-system
+  group: metrics.k8s.io
+  version: v1beta1
+  insecureSkipTLSVerify: true
+  groupPriorityMinimum: 100
+  versionPriority: 100
+EOF
+
+sleep 15
+kubectl get apiservice v1beta1.metrics.k8s.io   # want: AVAILABLE True
+kubectl top nodes                                # want: numbers
+```
+
+This is safe to do by hand and needs **no Git commit** — the APIService is
+K3s-owned. The original addon manifest still lives on the control-plane node at
+`/var/lib/rancher/k3s/server/manifests/metrics-server/`, so a future K3s restart
+re-applies an identical object. No drift.
+
+### Fix: Restart K3s on the Control Plane (heavy — if the above doesn't clear it)
+
+If the APIService still reports `MissingEndpoints` after recreating it, the wedge
+is deep in the apiserver's informer cache and only a control-plane restart resets it:
+
+```bash
+# On apple (control-plane node):
+sudo systemctl restart k3s
+```
+
+**Trade-off:** ~15–30s where kubectl / ArgoCD are unavailable. Running workloads
+keep serving (kubelets and pods are unaffected). K3s re-applies all addon manifests
+on start, so the metrics-server APIService comes back automatically here.
+
+### Cross-check: You Don't Need `kubectl top` to See Utilization
+
+Node/pod utilization is collected independently by VictoriaMetrics (Prometheus +
+node-exporter + kube-state-metrics), so even with `kubectl top` broken you can query
+it directly:
+
+```bash
+kubectl -n monitoring port-forward svc/victoriametrics-victoria-metrics-single-server 18428:8428 &
+
+# CPU busy % per node:
+curl -s http://localhost:18428/api/v1/query --data-urlencode \
+  'query=100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])))'
+
+# Memory used % per node:
+curl -s http://localhost:18428/api/v1/query --data-urlencode \
+  'query=100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)'
+```
+
+---
+
 ## 📜 Certificate Not Issued
 
 ### Symptoms
