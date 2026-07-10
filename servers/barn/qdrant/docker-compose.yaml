@@ -1,0 +1,27 @@
+# Qdrant – Vektor-Datenbank (barn / Bastel- & Dev-Instanz)
+# WHY hier auf barn: nah an den GPUs, wo später die Embeddings entstehen,
+#      schnell, wegwerfbar. Die "bleibende" Instanz kommt separat auf Orchard.
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
+
+    ports:
+      - "6333:6333"   # REST-API + Web-Dashboard  → http://barn:6333/dashboard
+      - "6334:6334"   # gRPC (schnellerer Transport, für spätere Clients/MCP)
+
+    # Storage – absoluter Pfad auf /srv, gleiche Konvention wie der ollama-Stack.
+    # WHY: Portainer führt Stacks aus wechselnden Arbeitsverzeichnissen aus –
+    #      relative ./-Pfade sind fragil. Absoluter Pfad = robust + ein bekannter
+    #      Ort, den wir später gezielt nach S3 sichern können.
+    volumes:
+      - /srv/docker/qdrant/data:/qdrant/storage
+
+    environment:
+      - TZ=Europe/Berlin
+      # Auth ist auf dieser lokalen Bastel-Instanz bewusst noch AUS – barn ist
+      # das Spielfeld. Auf Orchard (produktiv + exponiert) wird daraus ein
+      # Pflicht-SealedSecret:
+      # - QDRANT__SERVICE__API_KEY=<token>
