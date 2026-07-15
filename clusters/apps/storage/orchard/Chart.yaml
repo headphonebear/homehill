@@ -8,17 +8,25 @@ apiVersion: v2
 name: longhorn-orchard
 description: Longhorn distributed block storage for Orchard cluster at Homehill
 type: application
-version: 1.0.0
-appVersion: "1.11.0"
-# WHY: appVersion matches Longhorn's actual version (v1.11.0, Sept 2025)
+version: 1.0.1
+appVersion: "1.11.1"
+# WHY: appVersion matches Longhorn's actual version (v1.11.1, patch release)
 
 dependencies:
   - name: longhorn
     repository: https://charts.longhorn.io
-    version: "1.11.0"
-    # WHY: Official Longhorn Helm chart (latest stable as of Feb 2026)
-    # This version includes:
-    # - Improved replica scheduling
-    # - Better snapshot management
-    # - Enhanced disaster recovery features
-    # - v2 Data Engine support (experimental)
+    version: "1.11.1"
+    # WHY: Official Longhorn Helm chart. Bumped 1.11.0 -> 1.11.1 on 2026-07-15.
+    #
+    # THE FIX (why we HAD to move off 1.11.0):
+    #   v1.11.0 shipped a critical regression: proxy-connection leaks in the
+    #   longhorn-instance-manager pods leak the Go heap unbounded until the node
+    #   runs out of RAM (~1 week to OOM). We hit it live — plum's instance-manager
+    #   sat at ~11.8Gi real RSS (not page cache), lemon ~9.7Gi, while apple (no
+    #   attached engines) stayed at ~0.4Gi. MemAvailable on plum was down to ~878Mi.
+    #   Upstream: longhorn/longhorn#12668, #12573, #12643. 1.11.1 is the permanent fix.
+    #
+    # v1.11.1 also carries (bonus, no breaking changes — pure patch):
+    #   - S3 backup fix (AWS SDK Go v2) — unblocks the deferred Qdrant S3 backups
+    #   - replica storage double-count scheduling fix
+    # PREREQ: Kubernetes >= 1.25 (we run v1.34.4 — satisfied).
