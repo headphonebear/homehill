@@ -114,6 +114,17 @@ longhorn:
     # Replica-manager handles replication and health checks
     # Same reasoning as engine-manager
 
+    concurrentAutomaticEngineUpgradePerNodeLimit: 3
+    # WHY: Auto-upgrade volume engine images to `default-engine-image` after a
+    # Longhorn version bump — LIVE and non-disruptively, up to 3 volumes per node
+    # at once. Default is 0 (DISABLED), which was our footgun on 2026-07-15:
+    # bumping the chart 1.11.0 -> 1.11.1 upgraded the managers + instance-managers,
+    # but every volume's engine stayed pinned at longhorn-engine:v1.11.0 forever
+    # because nothing pulls them forward. Setting this > 0 means future patch bumps
+    # converge the data plane on their own — no manual per-volume `kubectl patch`.
+    # 3 = gentle for a 3-node homelab (bounded concurrency, no I/O storm).
+    # See memory: longhorn-1110-imleak-fix.
+
   # ╔──────────────────────────────────────────────────────────────────────────╗
   # ║ Longhorn UI (Dashboard)                                                  ║
   # ╚──────────────────────────────────────────────────────────────────────────╝
