@@ -1,0 +1,49 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Qdrant IngressRoute — https://qdrant.homehill.de                          ║
+# ║ Same convention as memos/longhorn: an HTTP→HTTPS redirect plus the HTTPS     ║
+# ║ route, TLS via the shared *.homehill.de wildcard. Internal-only.            ║
+# ║                                                                            ║
+# ║ NOTE: routes to the qdrant HTTP API on :6333. The gRPC port (:6334) is NOT  ║
+# ║ exposed here — clients (ingestor, MCP server) use the HTTP API. Add a        ║
+# ║ separate gRPC IngressRouteTCP later only if something actually needs it.     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: qdrant-http
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.app.host }}`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+          # WHY: shared redirect middleware, same one longhorn/argocd/memos use.
+      services:
+        - name: qdrant
+          port: 6333
+          # WHY: the subchart's Service is named `qdrant` (release name == chart
+          # name, so Helm collapses the fullname). Verified via `helm template`.
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: qdrant-https
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.app.host }}`)
+      kind: Rule
+      services:
+        - name: qdrant
+          port: 6333
+  tls:
+    secretName: homehill-wildcard-tls
+    # WHY: the *.homehill.de wildcard (cert-manager → traefik ns, default
+    # TLSStore). Same reference every other app uses.

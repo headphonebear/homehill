@@ -1,0 +1,50 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌻 Qdrant Application — the Orchard vector store (Project Sunflower)        ║
+# ║ Prod home for the memory system's collections: `outline-docs` (disposable,  ║
+# ║ rebuilt by the ingestor) and `claude-memory` (durable — real memories).     ║
+# ║ Upstream qdrant/qdrant chart + local templates for IngressRoute & the       ║
+# ║ API-key SealedSecret.                                                       ║
+# ║                                                                            ║
+# ║ AUTH (v1): a single API key, delivered via SealedSecret `qdrant-api-key`.   ║
+# ║ Per-collection RBAC / "rooms" is a deliberate later step.                   ║
+# ║                                                                            ║
+# ║ ⚠️  SEAL BEFORE FIRST SYNC: templates/apikey-sealedsecret.yaml is a         ║
+# ║     placeholder until Stefan seals the real key (see the file's header).    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: qdrant
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: sunflower
+  # WHY: first app to live outside `default` — see project-sunflower.yaml.
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/qdrant/orchard
+
+    helm:
+      releaseName: qdrant
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qdrant
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+      # WHY selfHeal:false — stateful app on a ReadWriteOnce Longhorn PVC. Same
+      # caution class as monitoring/memos: auto-reconcile on a StatefulSet with
+      # an RWO volume risks Multi-Attach churn. We sync this one deliberately.
+
+    syncOptions:
+      - CreateNamespace=true

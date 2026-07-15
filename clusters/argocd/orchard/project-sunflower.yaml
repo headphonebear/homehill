@@ -1,0 +1,38 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌻 AppProject: sunflower                                                   ║
+# ║ A named home for the memory-system apps (Qdrant & future friends), so they  ║
+# ║ don't sit in the catch-all `default` project. Right now this is DELIBERATELY ║
+# ║ permissive — same freedom as `default`, just under its own name. The point  ║
+# ║ today is the grouping + the label, not the guardrails.                      ║
+# ║                                                                            ║
+# ║ TIGHTEN LATER: once there are more Sunflower apps we can narrow sourceRepos  ║
+# ║ to this repo and destinations to the `qdrant`/sunflower namespaces. Every   ║
+# ║ restriction you add here becomes a thing ArgoCD will BLOCK if you forget to  ║
+# ║ whitelist it — so we earn that complexity when it buys us something.         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: sunflower
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+    # WHY: the project must exist before any Application that references it. A
+    # low wave makes app-of-apps apply this manifest before the qdrant app.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Project Sunflower — the memory system (Qdrant vector store & friends)
+
+  # ── Permissive on purpose (v1) — mirrors `default`, tighten when it pays off ──
+  sourceRepos:
+    - '*'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'

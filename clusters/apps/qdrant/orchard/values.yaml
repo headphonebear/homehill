@@ -1,0 +1,65 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌻 Qdrant — values                                                         ║
+# ║ Two blocks: `app` feeds our local templates (IngressRoute, SealedSecret),   ║
+# ║ `qdrant` configures the upstream subchart (namespaced by the dep name).     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ── Our local templates ───────────────────────────────────────────────────────
+app:
+  host: qdrant.homehill.de
+  # WHY: internal-only (homehill.de, behind the router). Flat subdomain — no
+  # multi-level, same DNS-01 quirk the other apps respect.
+  apiKeySecret:
+    name: qdrant-api-key
+    key: api-key
+    # WHY: the SealedSecret this app ships (templates/apikey-sealedsecret.yaml)
+    # provides this. The subchart references the SAME name/key below, so the two
+    # stay in lockstep — change it in one place, change it here too.
+
+# ── Upstream qdrant/qdrant subchart ───────────────────────────────────────────
+qdrant:
+  replicaCount: 1
+  # WHY: single node. Longhorn's block replication is our in-cluster redundancy;
+  # durability beyond the cluster will come from S3 snapshots (a later evening).
+
+  image:
+    tag: "v1.18.2"
+    # WHY: pin explicitly for parity with barn, even though the chart's default
+    # tag already resolves to appVersion v1.18.2.
+
+  persistence:
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+    # WHY: our corpus is tiny (outline-docs ~100 chunks, claude-memory small).
+    # 10Gi is generous headroom on Longhorn and trivial to expand later.
+    storageClassName: longhorn
+    # WHY: same block storage every stateful Orchard app uses. RWO — hence the
+    # selfHeal:false on the Application (Multi-Attach caution).
+
+  apiKey: false
+  # ╔══════════════════════════════════════════════════════════════════════════╗
+  # ║ ⚠️  DO NOT use the chart's apiKey.valueFrom here — it's a footgun under     ║
+  # ║ ArgoCD. The chart's `qdrant.secret` helper resolves valueFrom with a Helm  ║
+  # ║ `lookup` against the LIVE cluster at render time, then bakes the plaintext ║
+  # ║ into a mounted config file. But `lookup` returns nothing during           ║
+  # ║ `helm template` — which is exactly how ArgoCD renders — so it would ship   ║
+  # ║ an EMPTY key and Qdrant would come up with NO auth, silently. (Verified by ║
+  # ║ rendering: the qdrant-apikey Secret came out with empty data.)            ║
+  # ║ Instead we inject the key as a plain env var below — a normal pod-spec     ║
+  # ║ secretKeyRef, no lookup, renders identically offline.                     ║
+  # ╚══════════════════════════════════════════════════════════════════════════╝
+
+  env:
+    - name: QDRANT__SERVICE__API_KEY
+      # WHY: Qdrant maps any QDRANT__A__B env var onto config key a.b — so this
+      # sets service.api_key. Pulled from our SealedSecret; must match
+      # app.apiKeySecret above and the key the clients (ingestor, MCP) use.
+      valueFrom:
+        secretKeyRef:
+          name: qdrant-api-key
+          key: api-key
+
+  service:
+    type: ClusterIP
+    # WHY: no LoadBalancer/NodePort — reached only in-cluster and via the
+    # Traefik IngressRoute (templates/ingressroute.yaml). HTTP API is :6333.
