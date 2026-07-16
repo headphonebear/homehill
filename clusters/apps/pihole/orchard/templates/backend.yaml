@@ -2,14 +2,22 @@
 # ║ Backend glue: point a cluster Service at an OUT-OF-CLUSTER host.            ║
 # ║                                                                            ║
 # ║ Traefik's IngressRoute can only send traffic to a Kubernetes Service. But   ║
-# ║ Pi-hole lives on dovecote, outside the cluster. The standard recipe:        ║
+# ║ Pi-hole lives on dovecote, outside the cluster. The recipe:                 ║
 # ║   1. a Service with NO selector (so k8s won't try to find pods for it), and ║
-# ║   2. a hand-written EndpointSlice giving that Service a single endpoint —    ║
-# ║      dovecote's LAN IP. Traefik then load-balances to that IP.              ║
+# ║   2. a matching-NAME Endpoints object giving it one endpoint — dovecote's   ║
+# ║      LAN IP. Traefik then load-balances to that IP.                         ║
 # ║                                                                            ║
-# ║ Because the Service has no selector, the EndpointSlice controller leaves     ║
-# ║ our manual slice alone — we own it. If dovecote's IP ever changes, update    ║
-# ║ backendIP in values.yaml (it's the single source for the address).          ║
+# ║ WHY legacy `Endpoints` and not a hand-written `EndpointSlice`:              ║
+# ║ a manually-created EndpointSlice carrying the `kubernetes.io/service-name`   ║
+# ║ label gets garbage-collected by the endpointslice controller (it treats it  ║
+# ║ as an orphan it should manage). The classic, stable pattern is the legacy   ║
+# ║ Endpoints object — the EndpointSliceMirroring controller auto-generates a    ║
+# ║ proper EndpointSlice FROM it, which Traefik then reads. Endpoints is         ║
+# ║ deprecated (v1.33+ warns) but fully functional and is exactly the supported ║
+# ║ path for a selectorless external-IP service.                                ║
+# ║                                                                            ║
+# ║ If dovecote's IP ever changes, update backendIP in values.yaml (single      ║
+# ║ source for the address).                                                    ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 ---
 apiVersion: v1
@@ -27,23 +35,20 @@ spec:
       port: {{ .Values.piholeProxy.backendPort }}
       targetPort: {{ .Values.piholeProxy.backendPort }}
 ---
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
+apiVersion: v1
+kind: Endpoints
 metadata:
-  name: pihole-external-1
+  # Name MUST equal the Service name — that's how a selectorless Service binds
+  # to its Endpoints.
+  name: pihole-external
   namespace: {{ .Release.Namespace }}
   labels:
-    # This label is what ties the slice to the Service above. Required.
-    kubernetes.io/service-name: pihole-external
     app.kubernetes.io/name: pihole-proxy
-addressType: IPv4
-ports:
-  # Port name MUST match the Service port name ("http") so Traefik resolves it.
-  - name: http
-    protocol: TCP
-    port: {{ .Values.piholeProxy.backendPort }}
-endpoints:
+subsets:
   - addresses:
-      - {{ .Values.piholeProxy.backendIP | quote }}
-    conditions:
-      ready: true
+      - ip: {{ .Values.piholeProxy.backendIP | quote }}
+    ports:
+      # Port name MUST match the Service port name ("http") so Traefik resolves it.
+      - name: http
+        protocol: TCP
+        port: {{ .Values.piholeProxy.backendPort }}
