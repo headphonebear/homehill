@@ -182,6 +182,12 @@ traefik:
       # WHY: Enable Traefik CRDs (IngressRoute, Middleware, TLSOption, etc.)
       # This is the recommended way to configure Traefik
       # More powerful than standard Ingress (supports TCP/UDP, middlewares, etc.)
+      allowExternalNameServices: true
+      # WHY: Lets an IngressRoute target a Service of type ExternalName — i.e. a
+      # host OUTSIDE the cluster. Needed for the `pihole` app: Pi-hole runs on
+      # dovecote (192.168.1.101), so its HTTPS front door proxies to an
+      # ExternalName service. Off by default (SSRF caution); safe here — homelab,
+      # internal-only, pointing at our own box. See clusters/apps/pihole/orchard.
 
   # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Global Arguments                                                         ║

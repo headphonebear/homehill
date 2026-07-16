@@ -1,25 +1,21 @@
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ Backend glue: point a cluster Service at an OUT-OF-CLUSTER host.            ║
+# ║ Backend: an ExternalName Service pointing at the OUT-OF-CLUSTER Pi-hole.    ║
 # ║                                                                            ║
-# ║ Traefik's IngressRoute can only send traffic to a Kubernetes Service. But   ║
-# ║ Pi-hole lives on dovecote, outside the cluster. The recipe:                 ║
-# ║   1. a Service with NO selector (so k8s won't try to find pods for it), and ║
-# ║   2. a matching-NAME Endpoints object giving it one endpoint — dovecote's   ║
-# ║      LAN IP. Traefik then load-balances to that IP.                         ║
+# ║ Pi-hole runs on dovecote (192.168.1.101), outside the cluster. Kubernetes'  ║
+# ║ native primitive for "a Service that lives elsewhere" is type ExternalName. ║
 # ║                                                                            ║
-# ║ WHY legacy `Endpoints` and not a hand-written `EndpointSlice`:              ║
-# ║ a manually-created EndpointSlice carrying the `kubernetes.io/service-name`   ║
-# ║ label gets garbage-collected by the endpointslice controller (it treats it  ║
-# ║ as an orphan it should manage). The classic, stable pattern is the legacy   ║
-# ║ Endpoints object — the EndpointSliceMirroring controller auto-generates a    ║
-# ║ proper EndpointSlice FROM it, which Traefik then reads. Endpoints is         ║
-# ║ deprecated (v1.33+ warns) but fully functional and is exactly the supported ║
-# ║ path for a selectorless external-IP service.                                ║
+# ║ WHY ExternalName and NOT a Service + Endpoints/EndpointSlice:               ║
+# ║ ArgoCD's default resource.exclusions ignore BOTH `Endpoints` and            ║
+# ║ `EndpointSlice` (control-plane churn reduction) — so ArgoCD would never      ║
+# ║ create the endpoint object, leaving the Service empty → Traefik 503.        ║
+# ║ ExternalName needs no endpoint object at all, sidestepping the exclusion.   ║
 # ║                                                                            ║
-# ║ If dovecote's IP ever changes, update backendIP in values.yaml (single      ║
-# ║ source for the address).                                                    ║
+# ║ REQUIRES: `providers.kubernetesCRD.allowExternalNameServices: true` in the  ║
+# ║ traefik values (off by default for SSRF safety). Traefik then builds the    ║
+# ║ backend URL as http://<externalName>:<port>. A literal IP needs no DNS.     ║
+# ║                                                                            ║
+# ║ If dovecote's IP ever changes, update backendIP in values.yaml.            ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -28,27 +24,11 @@ metadata:
   labels:
     app.kubernetes.io/name: pihole-proxy
 spec:
-  # No selector on purpose — endpoints are supplied manually below.
+  type: ExternalName
+  # A literal IP: Traefik targets it directly, no cluster-DNS lookup needed
+  # (avoids a CoreDNS → Pi-hole resolution loop).
+  externalName: {{ .Values.piholeProxy.backendIP | quote }}
   ports:
     - name: http
       protocol: TCP
       port: {{ .Values.piholeProxy.backendPort }}
-      targetPort: {{ .Values.piholeProxy.backendPort }}
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  # Name MUST equal the Service name — that's how a selectorless Service binds
-  # to its Endpoints.
-  name: pihole-external
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app.kubernetes.io/name: pihole-proxy
-subsets:
-  - addresses:
-      - ip: {{ .Values.piholeProxy.backendIP | quote }}
-    ports:
-      # Port name MUST match the Service port name ("http") so Traefik resolves it.
-      - name: http
-        protocol: TCP
-        port: {{ .Values.piholeProxy.backendPort }}
