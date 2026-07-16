@@ -16,7 +16,7 @@ name: pihole-proxy-orchard
 description: HTTPS front door for the standalone Pi-hole on dovecote (Traefik reverse proxy)
 type: application
 version: 1.0.0
-appVersion: "6.2.2"
+appVersion: "6.4.3"
 # WHY appVersion: tracks the Pi-hole Core version running on dovecote (Core
-# v6.2.2, the digest-pinned image). Informational only — nothing here deploys
-# Pi-hole itself.
+# v6.4.3, docker tag 2026.07.2, digest-pinned). Informational only — nothing
+# here deploys Pi-hole itself.
