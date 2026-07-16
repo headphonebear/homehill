@@ -1,0 +1,14 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Values — Pi-hole HTTPS proxy                                               ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+piholeProxy:
+  # The public (internal) hostname Traefik answers on. MUST be a FLAT subdomain
+  # under homehill.de — multi-level (x.y.homehill.de) breaks the Hetzner DNS-01
+  # challenge that mints the wildcard cert. `pihole.homehill.de` is flat. ✓
+  host: pihole.homehill.de
+
+  # Where the real Pi-hole web UI lives: dovecote (the Wyse 3040), out-of-cluster
+  # on the LAN. Orchard nodes are on the same 192.168.1.0/24, so Traefik reaches
+  # it directly.
+  backendIP: "192.168.1.101"
+  backendPort: 80

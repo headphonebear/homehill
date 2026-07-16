@@ -1,0 +1,49 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Backend glue: point a cluster Service at an OUT-OF-CLUSTER host.            ║
+# ║                                                                            ║
+# ║ Traefik's IngressRoute can only send traffic to a Kubernetes Service. But   ║
+# ║ Pi-hole lives on dovecote, outside the cluster. The standard recipe:        ║
+# ║   1. a Service with NO selector (so k8s won't try to find pods for it), and ║
+# ║   2. a hand-written EndpointSlice giving that Service a single endpoint —    ║
+# ║      dovecote's LAN IP. Traefik then load-balances to that IP.              ║
+# ║                                                                            ║
+# ║ Because the Service has no selector, the EndpointSlice controller leaves     ║
+# ║ our manual slice alone — we own it. If dovecote's IP ever changes, update    ║
+# ║ backendIP in values.yaml (it's the single source for the address).          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-external
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: pihole-proxy
+spec:
+  # No selector on purpose — endpoints are supplied manually below.
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.piholeProxy.backendPort }}
+      targetPort: {{ .Values.piholeProxy.backendPort }}
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: pihole-external-1
+  namespace: {{ .Release.Namespace }}
+  labels:
+    # This label is what ties the slice to the Service above. Required.
+    kubernetes.io/service-name: pihole-external
+    app.kubernetes.io/name: pihole-proxy
+addressType: IPv4
+ports:
+  # Port name MUST match the Service port name ("http") so Traefik resolves it.
+  - name: http
+    protocol: TCP
+    port: {{ .Values.piholeProxy.backendPort }}
+endpoints:
+  - addresses:
+      - {{ .Values.piholeProxy.backendIP | quote }}
+    conditions:
+      ready: true

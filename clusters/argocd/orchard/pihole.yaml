@@ -1,0 +1,46 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🕳️  Pi-hole Proxy Application — HTTPS front door for the standalone Pi-hole ║
+# ║ Pi-hole runs on dovecote (Wyse 3040), out-of-cluster. This app only wires   ║
+# ║ Orchard's Traefik to reverse-proxy https://pihole.homehill.de → dovecote:80 ║
+# ║ using the wildcard cert. See clusters/apps/pihole/orchard for the why.       ║
+# ║                                                                            ║
+# ║ ⚠️ DNS prerequisite: the Pi-hole A-record `pihole.homehill.de` must point at ║
+# ║    192.168.1.50 (Traefik), NOT dovecote — otherwise the request never       ║
+# ║    reaches the proxy. (Old record pointed at the now-dead .142/nook.)       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pihole
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/pihole/orchard
+
+    helm:
+      releaseName: pihole
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pihole
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      # WHY selfHeal:true — this app is pure stateless routing glue (Service,
+      # EndpointSlice, IngressRoutes). No PVC, no Multi-Attach risk. Safe to
+      # auto-reconcile, same class as traefik/argocd.
+
+    syncOptions:
+      - CreateNamespace=true

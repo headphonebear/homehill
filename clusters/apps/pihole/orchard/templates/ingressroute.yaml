@@ -1,0 +1,50 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ IngressRoutes for https://pihole.homehill.de                               ║
+# ║ Same shape as Grafana: an http route that redirects to https, and an https  ║
+# ║ route that terminates TLS (wildcard via the `default` TLSStore) and proxies ║
+# ║ to the pihole-external Service → dovecote.                                   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+# HTTP → HTTPS redirect
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pihole-http
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.piholeProxy.host }}`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+      services:
+        - name: pihole-external
+          port: {{ .Values.piholeProxy.backendPort }}
+---
+# HTTPS
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pihole-https
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.piholeProxy.host }}`)
+      kind: Rule
+      middlewares:
+        # HSTS + hardening headers — sensible for an admin panel. Cross-namespace
+        # ref into `traefik`, same as every other homehill route.
+        - name: security-headers
+          namespace: traefik
+      services:
+        - name: pihole-external
+          port: {{ .Values.piholeProxy.backendPort }}
+  tls:
+    # No secret in THIS namespace — the `default` TLSStore in `traefik` serves the
+    # homehill-wildcard-tls cluster-wide. Naming it explicitly is belt-and-braces.
+    secretName: homehill-wildcard-tls

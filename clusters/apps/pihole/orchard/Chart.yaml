@@ -1,0 +1,22 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🕳️  Pi-hole Proxy — Umbrella Chart for Orchard                              ║
+# ║ Pi-hole itself does NOT run in the cluster — it lives on dovecote (the Wyse ║
+# ║ 3040) as a standalone Docker container, answering DNS on 192.168.1.101:53.  ║
+# ║ This chart is *only* the HTTPS front door: it lets Orchard's Traefik serve  ║
+# ║ https://pihole.homehill.de with the wildcard cert and reverse-proxy to      ║
+# ║ dovecote's web UI on :80.                                                    ║
+# ║                                                                            ║
+# ║ WHY no dependencies: there is no upstream chart to wrap — just three local   ║
+# ║ manifests (Service without selector, EndpointSlice → dovecote, IngressRoute).║
+# ║ DNS stays fully independent of the cluster; only the pretty HTTPS URL is     ║
+# ║ coupled. Cluster down? http://192.168.1.101/admin still works.              ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v2
+name: pihole-proxy-orchard
+description: HTTPS front door for the standalone Pi-hole on dovecote (Traefik reverse proxy)
+type: application
+version: 1.0.0
+appVersion: "6.2.2"
+# WHY appVersion: tracks the Pi-hole Core version running on dovecote (Core
+# v6.2.2, the digest-pinned image). Informational only — nothing here deploys
+# Pi-hole itself.
