@@ -8,9 +8,21 @@ and this project uses date-based versioning (YYYY.MM.DD).
 ## [Unreleased]
 ### Planned
 - Prometheus/Grafana monitoring stack
-- Swarm → Orchard Kubernetes migration
 - S3 backups with restic
 - Tailscale/WireGuard remote access
+
+---
+
+## [2026-07-16] "Swarm Teardown" 🐝
+### Added
+- `servers/dovecote/` — Pi-hole (Core v6.4.3) migrated to the Dell Wyse 3040 as a standalone Docker host (host networking); compose + READMEs now under source control
+- `clusters/apps/pihole/` — HTTPS front door: Orchard's Traefik reverse-proxies `pihole.homehill.de` to dovecote via a `type: ExternalName` service (enabled `providers.kubernetesCRD.allowExternalNameServices` in Traefik)
+
+### Changed
+- Pi-hole is now the network DNS on `dovecote` (`192.168.1.101`); the TP-Link router hands it out via DHCP
+
+### Removed
+- `swarm/` — the legacy 3-node Docker Swarm (`dovecote`, `greenhouse`, `nook`) was fully dissolved. Every stack was unused except Pi-hole, which was migrated; nodes `greenhouse` + `nook` (N150s) freed. History preserved in Git.
 
 ---
 

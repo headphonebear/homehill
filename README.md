@@ -12,12 +12,12 @@ Built with passion by [Headphonebear](https://github.com/headphonebear) 🐻 and
 
 ```
 homehill/
-├── servers/              # Standalone servers (Alpine Linux)
+├── servers/              # Standalone hosts
 │   ├── mk3/             # Music Server (ASUS PN50) 🎵
-│   └── barn/            # Desktop running Docker
+│   ├── barn/            # Desktop running Docker
+│   └── dovecote/        # Pi-hole DNS + ad-blocking (Wyse 3040) 🕊️
 ├── clusters/             # Kubernetes clusters
 │   └── orchard/         # K3s cluster (apple, lemon, plum) 🍎
-├── swarm/               # Legacy Docker Swarm (being phased out)
 └── docs/                # Comprehensive documentation
     ├── philosophy.md    # Core principles and values
     ├── architecture.md  # Technical deep dive
@@ -61,10 +61,6 @@ A carefully crafted listening experience. 626GB of meticulously curated FLAC fil
 Future home for central Homelab services with GitOps-friendly architecture.
 
 👉 **See [`clusters/orchard/manifests/orchard/README.md`](clusters/first-season/orchard/README.md) for details**
-
-### Legacy Swarm
-**Status:** Being phased out (Q1-Q2 2026)  
-Docker Swarm services scheduled for migration to Orchard or standalone servers.
 
 ---
 

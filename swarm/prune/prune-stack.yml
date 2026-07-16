@@ -1,7 +1,0 @@
-services:
-  prune:
-    image: headphonebear/prune-image:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    deploy:
-      mode: global

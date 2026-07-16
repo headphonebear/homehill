@@ -6,11 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Homehill is a personal homelab **infrastructure-as-code monorepo**. There is no application source code to build or test — it is declarative configuration (Kubernetes manifests, Helm values, Docker Compose) that is applied to running machines. "Correctness" means valid YAML/manifests and adherence to the GitOps conventions below, not passing a test suite.
 
-Three top-level domains, each at a different lifecycle stage:
+Two top-level domains, each at a different lifecycle stage:
 
 - `clusters/` — **the active focus.** A K3s cluster (`orchard`) managed by ArgoCD via GitOps. Most work happens here.
-- `servers/` — Standalone hosts (`mk3` music server, `barn` desktop) running Docker Compose stacks. Applied manually per host.
-- `swarm/` — Legacy Docker Swarm stacks being phased out (migrated into `orchard` or `servers/`). Avoid adding new things here.
+- `servers/` — Standalone hosts (`mk3` music server, `barn` desktop, `dovecote` Pi-hole/DNS) running Docker Compose stacks. Applied manually per host.
+
+(A legacy Docker Swarm was fully dissolved on 2026-07-16 — its one live service, Pi-hole, moved to `servers/dovecote/`; see CHANGELOG. Its nodes `greenhouse` + `nook` were freed.)
 
 The cluster is named after a season/orchard theme; nodes are `apple` (control-plane), `lemon`, `plum`.
 
