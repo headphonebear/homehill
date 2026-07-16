@@ -1,0 +1,50 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Vaultwarden IngressRoute — https://vault.homehill.de                       ║
+# ║ Mirrors the repo convention (see memos/longhorn): an HTTP→HTTPS redirect     ║
+# ║ plus the HTTPS route, TLS via the shared wildcard cert (default TLSStore).   ║
+# ║                                                                            ║
+# ║ TLS matters extra here: Bitwarden clients use the browser WebCrypto API,     ║
+# ║ which only works over HTTPS — so the redirect isn't just tidiness, the app   ║
+# ║ is unusable over plain HTTP.                                                 ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vaultwarden-http
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.app.host }}`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+          # WHY: shared redirect middleware, same one memos/longhorn/grafana use.
+      services:
+        - name: vaultwarden
+          port: 80
+          # WHY: the subchart's Service is named after the release (`vaultwarden`)
+          # and exposes port 80 → container 8080. Verified via `helm template`.
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vaultwarden-https
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.app.host }}`)
+      kind: Rule
+      services:
+        - name: vaultwarden
+          port: 80
+  tls:
+    secretName: homehill-wildcard-tls
+    # WHY: the *.homehill.de wildcard (issued by cert-manager into the traefik
+    # ns, exposed via the default TLSStore). Same reference every other app uses —
+    # no per-namespace copy needed.

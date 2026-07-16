@@ -1,0 +1,113 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🔐 Vaultwarden — values                                                    ║
+# ║ Three blocks feed OUR local templates (database/, ingressroute, backup);     ║
+# ║ the `vaultwarden:` block configures the upstream guerzon subchart (namespaced║
+# ║ by the dependency name — the subchart never sees the top-level keys).        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ── PostgreSQL (CloudNativePG) — read by templates/database.yaml ───────────────
+database:
+  name: vaultwarden-db
+  # WHY: CNPG derives resource names from this. The read-write connection service
+  # is `<name>-rw` (vaultwarden-db-rw), and the generated app-user credentials
+  # land in the secret `<name>-app` (vaultwarden-db-app) with a ready-made `uri`
+  # key. The subchart below points DATABASE_URL straight at that `uri`.
+  storageSize: 5Gi
+  # WHY: a password vault's DB is tiny (rows are small encrypted blobs). 5Gi is
+  # generous headroom on Longhorn and trivial to expand later.
+  storageClass: longhorn
+  # WHY: single-instance CNPG, so Longhorn's block replication IS our in-cluster
+  # redundancy (no replication² problem). Durability beyond the cluster = S3 below.
+
+# ── S3 backup target (Hetzner Object Storage) — read by templates/database.yaml ─
+backup:
+  destinationPath: s3://bearbackups/orchard/vaultwarden
+  # WHY: shared bucket `bearbackups`, per-app prefix (memos set the precedent) so
+  # each DB's backups live side by side without colliding.
+  endpointURL: https://hel1.your-objectstorage.com
+  retention: "30d"
+
+# ── Our local templates (IngressRoute) ────────────────────────────────────────
+app:
+  host: vault.homehill.de
+  # WHY: internal-only (homehill.de, behind the router). Flat subdomain — no
+  # multi-level, same Hetzner DNS-01 quirk the other apps respect. Pi-hole holds
+  # the A-record → apple (192.168.1.50).
+
+# ── Upstream guerzon/vaultwarden subchart ─────────────────────────────────────
+vaultwarden:
+  replicas: 1
+  # WHY: single instance. Vaultwarden isn't built for horizontal scale, and our
+  # data lives in CNPG (HA-able there) + a Longhorn PVC for /data.
+
+  image:
+    tag: "1.36.0-alpine"
+    # WHY: pin explicitly (chart default already resolves here) — no chasing
+    # :latest, matches appVersion in Chart.yaml.
+
+  domain: "https://vault.homehill.de"
+  # WHY: Vaultwarden MUST know its public URL or WebAuthn/attachments/2FA break.
+  # HTTPS because the IngressRoute terminates TLS with the wildcard cert.
+
+  # ── Database: point at the CNPG-generated secret ────────────────────────────
+  database:
+    type: postgresql
+    existingSecret: vaultwarden-db-app
+    existingSecretKey: uri
+    # ╔════════════════════════════════════════════════════════════════════════╗
+    # ║ WHY exactly these three: the chart's _podSpec has two Postgres branches. ║
+    # ║ Setting BOTH existingSecret AND existingSecretKey skips the split        ║
+    # ║ PGUSER/PGPASSWORD branch and takes the "DATABASE_URL from one secret     ║
+    # ║ key" branch — which is precisely the ready-made `uri` CNPG writes into    ║
+    # ║ vaultwarden-db-app. One DSN, no credentials duplicated anywhere.         ║
+    # ╚════════════════════════════════════════════════════════════════════════╝
+
+  # ── Persistence: /data still needed even with an external DB ─────────────────
+  storage:
+    data:
+      name: vaultwarden-data
+      size: 5Gi
+      class: longhorn
+      accessMode: ReadWriteOnce
+      # WHY: Postgres holds the vault rows, but /data still holds attachments,
+      # Sends, the icon cache, and the RSA keypair that signs JWTs. Lose it and
+      # sessions reset + attachments vanish — so it gets its own Longhorn PVC.
+      # RWO → hence selfHeal:false on the Application (Multi-Attach caution).
+
+  # ── Admin panel: token from our SealedSecret ────────────────────────────────
+  adminToken:
+    existingSecret: vaultwarden-admin
+    existingSecretKey: token
+    # WHY: enables /admin (user invites, settings) behind a strong random token.
+    # The token is a SealedSecret (templates/admin-token-sealedsecret.yaml), so
+    # the plaintext never touches Git. Vaultwarden itself becomes the place we
+    # keep that plaintext once the vault is live.
+
+  # ── Signups locked down ─────────────────────────────────────────────────────
+  signupsAllowed: false
+  # WHY: nobody can self-register. Stefan (and Frau Bear 🐻) get in via an admin
+  # invite. A public-internet-adjacent password vault with open signup is a
+  # non-starter — even internal-only, closed by default is the right posture.
+  invitationsAllowed: true
+  # WHY: still allow the admin panel to send/create invitations.
+
+  # ── We bring our own ingress (Traefik IngressRoute) ─────────────────────────
+  ingress:
+    enabled: false
+    # WHY: the chart ships an nginx-style Ingress; we use Traefik IngressRoute
+    # CRDs everywhere (templates/ingressroute.yaml), with the shared wildcard TLS.
+
+  service:
+    type: ClusterIP
+    # WHY: reached only in-cluster + via the Traefik IngressRoute. Container
+    # listens on rocket.port 8080; the Service exposes that.
+
+  strategy:
+    type: Recreate
+    # ╔════════════════════════════════════════════════════════════════════════╗
+    # ║ WHY Recreate (not the default RollingUpdate): single replica on a         ║
+    # ║ ReadWriteOnce Longhorn PVC (/data). RollingUpdate would spin up the new    ║
+    # ║ pod BEFORE the old one releases the volume → Longhorn Multi-Attach, stuck  ║
+    # ║ rollout. Recreate tears the old pod down first. Same lesson the cluster    ║
+    # ║ taught us with Grafana's RWO PVC.                                         ║
+    # ╚════════════════════════════════════════════════════════════════════════╝

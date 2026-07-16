@@ -1,0 +1,28 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🔐 Vaultwarden Umbrella Chart for Orchard                                  ║
+# ║ Self-hosted Bitwarden-compatible password manager. This becomes the         ║
+# ║ source-of-truth vault for Homehill secrets (the plaintext behind every       ║
+# ║ SealedSecret lives here, not in Git). Wraps the community guerzon/vaultwarden║
+# ║ chart as a dependency; local templates/ add the CNPG database + its S3       ║
+# ║ backup, the IngressRoute, and the admin-token SealedSecret.                  ║
+# ║                                                                            ║
+# ║ After editing the dependency below: `helm dependency build` to refetch the  ║
+# ║ .tgz (gitignored — only Chart.lock is committed). ArgoCD does this server-   ║
+# ║ side automatically.                                                         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v2
+name: vaultwarden-orchard
+description: Vaultwarden password manager at Homehill — the secrets source-of-truth
+type: application
+version: 1.0.0
+appVersion: "1.36.0"
+# WHY: matches the pinned upstream chart/app below. guerzon chart 0.43.1 ships
+# Vaultwarden 1.36.0 (current stable as of the deploy, July 2026).
+
+dependencies:
+  - name: vaultwarden
+    repository: https://guerzon.github.io/vaultwarden
+    version: "0.43.1"
+    # WHY: the well-maintained community chart (Stefan runs the same one at work),
+    # pinned — no chasing :latest. Its values are configured under the `vaultwarden:`
+    # key in values.yaml (subchart values are namespaced by the dependency name).

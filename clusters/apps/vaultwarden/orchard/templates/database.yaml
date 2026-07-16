@@ -1,0 +1,87 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Vaultwarden PostgreSQL — CloudNativePG Cluster + ScheduledBackup           ║
+# ║ Single-instance PG for the vault, with continuous WAL archiving + daily base ║
+# ║ backups to Hetzner Object Storage (bucket `bearbackups`).                    ║
+# ║                                                                            ║
+# ║ FRESH INSTALL: the Cluster is created EMPTY (bootstrap.initdb). Unlike the   ║
+# ║ memos migration there is no data to restore — Vaultwarden runs its own       ║
+# ║ schema migrations on first connect against the empty db. So DB + app deploy  ║
+# ║ in one shot; no enabled-gate cutover dance.                                  ║
+# ║                                                                            ║
+# ║ For a PASSWORD VAULT the S3 backup below is the whole point of choosing      ║
+# ║ CNPG over SQLite — WAL archiving + nightly base = point-in-time recovery.    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.database.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: 1
+  # WHY: one instance. HA is a later upgrade (bump instances). Durability today =
+  # Longhorn block replication + S3 backups.
+
+  # WHY no imageName: use the operator's default PostgreSQL image
+  # (ghcr.io/cloudnative-pg/postgresql — first-party, not a bitnami image).
+
+  storage:
+    size: {{ .Values.database.storageSize }}
+    storageClass: {{ .Values.database.storageClass }}
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+    # WHY: a two-person vault idles. Modest requests, a memory limit as a
+    # guardrail, no CPU limit (don't throttle checkpoints).
+
+  # ── Bootstrap: create an EMPTY database + owner role ────────────────────────
+  bootstrap:
+    initdb:
+      database: vaultwarden
+      owner: vaultwarden
+      # WHY: CNPG creates db `vaultwarden` owned by role `vaultwarden` and
+      # auto-generates the password into secret `{{ .Values.database.name }}-app`,
+      # which carries a ready-made `uri` key. The subchart's DATABASE_URL reads
+      # its DSN straight from there — no password duplicated in values.
+
+  # ── Continuous backup to Hetzner Object Storage (in-tree Barman) ────────────
+  backup:
+    retentionPolicy: {{ .Values.backup.retention | quote }}
+    barmanObjectStore:
+      destinationPath: {{ .Values.backup.destinationPath | quote }}
+      endpointURL: {{ .Values.backup.endpointURL | quote }}
+      s3Credentials:
+        accessKeyId:
+          name: vaultwarden-db-s3-backup
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: vaultwarden-db-s3-backup
+          key: ACCESS_SECRET_KEY
+        # WHY: references the SealedSecret in this namespace
+        # (s3-backup-sealedsecret.yaml). Sealed name+namespace-scoped to
+        # `vaultwarden-db-s3-backup` / `vaultwarden` — can't be reused elsewhere.
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+      # WHY in-tree barmanObjectStore (not the new plugin): works on the current
+      # operator and avoids a second component. Same choice as memos.
+---
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Daily base backup — WAL archiving already runs continuously; this pins a    ║
+# ║ fresh base each night so restores/PITR stay fast and retention can prune.   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ .Values.database.name }}-daily
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "0 0 3 * * *"
+  # WHY: 6-field CNPG cron (leading seconds field). 03:00 nightly — quiet hours.
+  backupOwnerReference: self
+  cluster:
+    name: {{ .Values.database.name }}

@@ -1,0 +1,53 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Vaultwarden Application                                                    ║
+# ║ Self-hosted Bitwarden-compatible password manager — the source-of-truth      ║
+# ║ vault for Homehill secrets. Bundles the CNPG database, its S3-backup          ║
+# ║ SealedSecret, the admin-token SealedSecret, the IngressRoute, and (via the    ║
+# ║ guerzon subchart) the Vaultwarden Deployment/Service/PVC.                    ║
+# ║                                                                            ║
+# ║ DEPLOY ORDER: needs the cnpg operator (wave -2) for its CRDs. This app is    ║
+# ║ default wave 0. FRESH INSTALL — no cutover gate: the CNPG Cluster comes up    ║
+# ║ empty, Vaultwarden migrates its own schema on first connect. The app pod may  ║
+# ║ crashloop briefly until the DB is Ready, then settles on its own.            ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vaultwarden
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/vaultwarden/orchard
+
+    helm:
+      releaseName: vaultwarden
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vaultwarden
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+      # WHY selfHeal:false — this app is stateful (CNPG Postgres + an irreplaceable
+      # password vault + a /data PVC). We want deliberate, manual `argocd app sync`
+      # here — no auto-reconcile surprises on a database. Same caution class as
+      # memos and monitoring.
+
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      # WHY ServerSideApply: the app declares a CNPG `Cluster` CR; SSA keeps us
+      # clear of the client-side annotation-size limit and plays nicely with the
+      # operator's own field ownership on the resource.
