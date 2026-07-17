@@ -1,0 +1,127 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Isley — Deployment                                                         ║
+# ║ Single-replica Go grow-tracker. Talks to the CNPG Postgres (isley-db-rw)     ║
+# ║ and persists photo/snapshot uploads to a Longhorn RWO PVC at /app/uploads.   ║
+# ║                                                                            ║
+# ║ KUSTOMIZE, NOT HELM: concrete manifest, no templating.                       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: isley
+  namespace: isley
+  labels:
+    app: isley
+spec:
+  replicas: 1
+  # WHY: single instance. Isley is a single-user hobby tracker with no horizontal
+  # scale story; state lives in CNPG (HA-able there) + the uploads PVC below.
+
+  selector:
+    matchLabels:
+      app: isley
+
+  strategy:
+    type: Recreate
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║ WHY Recreate (not the default RollingUpdate): single replica on a           ║
+    # ║ ReadWriteOnce Longhorn PVC (/app/uploads). RollingUpdate spins the new pod   ║
+    # ║ up BEFORE the old releases the volume → Longhorn Multi-Attach, stuck         ║
+    # ║ rollout. Recreate tears the old pod down first. Same lesson Grafana +        ║
+    # ║ Vaultwarden taught the cluster. (Also why the Application runs selfHeal:false.)║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+  template:
+    metadata:
+      labels:
+        app: isley
+    spec:
+      containers:
+        - name: isley
+          image: dwot/isley:2.3.0
+          # WHY pinned to 2.3.0 (NB: the Docker Hub tag has NO `v` prefix — `v2.3.0`
+          # does not exist and would ImagePullBackOff). No chasing :latest, matches
+          # the release we vetted (numbered DB migrations, ~2-4 week cadence).
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+
+          env:
+            # ── App ──────────────────────────────────────────────────────────────
+            - name: ISLEY_PORT
+              value: "8080"
+
+            # ── Database wiring (CNPG cluster isley-db) ──────────────────────────
+            - name: ISLEY_DB_DRIVER
+              value: postgres
+            - name: ISLEY_DB_HOST
+              value: isley-db-rw
+              # WHY: CNPG publishes the read-write endpoint as `<cluster>-rw`. Always
+              # target -rw (not the pod) so failover/restart stays transparent.
+            - name: ISLEY_DB_PORT
+              value: "5432"
+            - name: ISLEY_DB_USER
+              value: isley
+            - name: ISLEY_DB_NAME
+              value: isley
+              # WHY user+name are plain: they aren't secret and are fixed by our own
+              # bootstrap (database.yaml: owner=isley, database=isley). Only the
+              # password is a secret — pulled below.
+            - name: ISLEY_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: isley-db-app
+                  key: password
+                  # WHY: CNPG auto-generates this secret at bootstrap. We consume
+                  # only the `password` key — no credential duplicated into Git.
+
+            # ── Session signing key ──────────────────────────────────────────────
+            - name: ISLEY_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: isley-session
+                  key: ISLEY_SESSION_SECRET
+                  # WHY: from our SealedSecret (session-sealedsecret.yaml).
+
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+              # WHY: photos, webcam snapshots + overlays live here. Lose it and the
+              # image library vanishes (DB keeps the metadata) — so it gets a PVC.
+
+          # ── Probes ──────────────────────────────────────────────────────────────
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            # WHY /health for readiness: Isley's /health handler pings the DB and
+            # returns 503 when it's unreachable (app/routes.go). So a pod only joins
+            # the Service once its DB backend is actually up — no traffic into a pod
+            # that can't answer.
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            # WHY tcpSocket, NOT /health: liveness must test "is the process alive?",
+            # not "is the DB up?". A DB-dependent liveness probe would restart the pod
+            # when the DB blips — which can't fix the DB and just crash-loops. Keep
+            # DB health on readiness (above); keep liveness to the process/port.
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+              # WHY: a Go single-user app is light. Modest requests, a memory limit as
+              # a guardrail, no CPU limit (don't throttle request handling).
+
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: isley-uploads

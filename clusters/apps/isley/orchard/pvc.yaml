@@ -1,0 +1,22 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Isley — uploads PVC                                                        ║
+# ║ Longhorn RWO volume backing /app/uploads (photos, webcam snapshots,          ║
+# ║ overlays). RWO + single replica is why the Deployment uses Recreate and the  ║
+# ║ Application runs selfHeal:false (Multi-Attach caution).                       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: isley-uploads
+  namespace: isley
+  labels:
+    app: isley
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+      # WHY 5Gi: photos accumulate but a hobby grow log is modest. Longhorn PVCs
+      # expand later without downtime, so start conservative.

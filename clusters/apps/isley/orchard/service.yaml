@@ -1,0 +1,20 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Isley — Service (ClusterIP)                                                ║
+# ║ Reached only in-cluster and via the Traefik IngressRoute. Container listens  ║
+# ║ on 8080 (ISLEY_PORT); this exposes it as the stable in-cluster endpoint.     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: isley
+  namespace: isley
+  labels:
+    app: isley
+spec:
+  type: ClusterIP
+  selector:
+    app: isley
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

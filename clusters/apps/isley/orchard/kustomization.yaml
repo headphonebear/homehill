@@ -1,0 +1,30 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Isley — Kustomization (the repo's FIRST Kustomize app)                     ║
+# ║                                                                            ║
+# ║ WHY Kustomize, not our usual Helm umbrella: Isley ships no upstream Helm     ║
+# ║ chart, so there is nothing to wrap as a dependency. Every manifest here is    ║
+# ║ ours and hand-written — Kustomize lets us list plain, readable YAML with no   ║
+# ║ templating ceremony. ArgoCD auto-detects this file (no `helm:` block in the   ║
+# ║ Application) and applies the resources below.                                ║
+# ║                                                                            ║
+# ║ `namespace: isley` pins every resource into the namespace uniformly; the      ║
+# ║ Namespace object itself is the first resource so it exists before the rest.   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: isley
+
+resources:
+  # ── Namespace first ────────────────────────────────────────────────────────
+  - namespace.yaml
+  # ── Data layer (CNPG Postgres + its secrets) ───────────────────────────────
+  - database.yaml
+  - s3-backup-sealedsecret.yaml
+  - session-sealedsecret.yaml
+  # ── Workload ───────────────────────────────────────────────────────────────
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  # ── Ingress ────────────────────────────────────────────────────────────────
+  - ingressroute.yaml

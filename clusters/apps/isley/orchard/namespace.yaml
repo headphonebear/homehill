@@ -1,0 +1,12 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Isley — Namespace                                                          ║
+# ║ Declared as part of the app (not via the Application's CreateNamespace flag)  ║
+# ║ so the namespace is GitOps-managed like everything else. ArgoCD applies       ║
+# ║ Namespaces before namespaced resources, so ordering is automatic.            ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: isley
+  labels:
+    app: isley

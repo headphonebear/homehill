@@ -1,0 +1,46 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Isley — ArgoCD Application (cannabis grow-tracker)                         ║
+# ║                                                                            ║
+# ║ FIRST KUSTOMIZE APP IN THE REPO. Note there is NO `helm:` block under        ║
+# ║ source — ArgoCD auto-detects the kustomization.yaml at source.path and        ║
+# ║ renders with Kustomize. Every other app here is a Helm umbrella; Isley is     ║
+# ║ the deliberate exception because it has no upstream chart to wrap.           ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: isley
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+    # WHY: ArgoCD only regenerates when something under THIS path changes.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+    # WHY: cascading delete — removing the app cleans up its resources.
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/isley/orchard
+    # WHY no `helm:` block: the presence of kustomization.yaml makes ArgoCD use
+    # Kustomize automatically. This is the one line that marks Isley as our first
+    # non-Helm app.
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: isley
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+      # ╔══════════════════════════════════════════════════════════════════════════╗
+      # ║ WHY selfHeal:false (same call as vaultwarden/monitoring): Isley runs on     ║
+      # ║ ReadWriteOnce Longhorn PVCs (uploads + the CNPG data volume). Auto-syncing   ║
+      # ║ on drift can spawn a second pod before the first releases its RWO volume →   ║
+      # ║ Longhorn Multi-Attach, stuck rollout. Sync this app MANUALLY               ║
+      # ║ (`argocd app sync isley`). prune stays true; only drift-healing is off.     ║
+      # ╚══════════════════════════════════════════════════════════════════════════╝
+    syncOptions:
+      - CreateNamespace=false
+      # WHY false: the namespace is declared as a resource (namespace.yaml), so
+      # ArgoCD manages it directly — no need to also create it via this flag.

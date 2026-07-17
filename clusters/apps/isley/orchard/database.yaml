@@ -1,0 +1,94 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Isley PostgreSQL — CloudNativePG Cluster + ScheduledBackup                  ║
+# ║ Single-instance PG for the grow-tracker, with continuous WAL archiving +     ║
+# ║ nightly base backups to Hetzner Object Storage (bucket `bearbackups`).       ║
+# ║                                                                            ║
+# ║ FRESH INSTALL: the Cluster is created EMPTY (bootstrap.initdb). Isley runs    ║
+# ║ its own numbered schema migrations on first connect against the empty db,     ║
+# ║ so DB + app deploy in one shot — no data-restore / cutover dance (same as     ║
+# ║ Vaultwarden, unlike the memos migration).                                    ║
+# ║                                                                            ║
+# ║ KUSTOMIZE, NOT HELM: this is our first non-Helm app. Isley ships no upstream  ║
+# ║ chart, so every value below is CONCRETE — what you read is what deploys.      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: isley-db
+  namespace: isley
+spec:
+  instances: 1
+  # WHY: one instance. HA is a later upgrade (bump instances). Durability today =
+  # Longhorn block replication + the S3 backups below.
+
+  # WHY no imageName: use the operator's default PostgreSQL image
+  # (ghcr.io/cloudnative-pg/postgresql — first-party, not a bitnami image).
+
+  storage:
+    size: 5Gi
+    storageClass: longhorn
+    # WHY single-instance CNPG on Longhorn: Longhorn's block replication IS our
+    # in-cluster redundancy (no replication² problem). Durability beyond the
+    # cluster = S3 below. 5Gi is generous for a grow log's small rows; expandable.
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+    # WHY: a single-user hobby tracker idles. Modest requests, a memory limit as a
+    # guardrail, no CPU limit (don't throttle Postgres checkpoints).
+
+  # ── Bootstrap: create an EMPTY database + owner role ────────────────────────
+  bootstrap:
+    initdb:
+      database: isley
+      owner: isley
+      # WHY: CNPG creates db `isley` owned by role `isley` and auto-generates the
+      # password into secret `isley-db-app`. That secret carries discrete keys
+      # (username, password, host, port, dbname) AND a ready-made `uri`. Isley
+      # wants the DB config as SEPARATE env vars (ISLEY_DB_*), so the Deployment
+      # pulls ISLEY_DB_PASSWORD via secretKeyRef from that secret's `password`
+      # key — no password ever duplicated into Git or values.
+
+  # ── Continuous backup to Hetzner Object Storage (in-tree Barman) ────────────
+  backup:
+    retentionPolicy: "30d"
+    barmanObjectStore:
+      destinationPath: s3://bearbackups/orchard/isley
+      # WHY: shared bucket `bearbackups`, per-app prefix (memos set the precedent,
+      # vaultwarden followed) so each DB's backups live side by side.
+      endpointURL: https://hel1.your-objectstorage.com
+      s3Credentials:
+        accessKeyId:
+          name: isley-db-s3-backup
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: isley-db-s3-backup
+          key: ACCESS_SECRET_KEY
+        # WHY: references the SealedSecret in this namespace
+        # (s3-backup-sealedsecret.yaml). Sealed name+namespace-scoped to
+        # `isley-db-s3-backup` / `isley` — can't be reused elsewhere.
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+      # WHY in-tree barmanObjectStore (not the new plugin): works on the current
+      # operator and avoids a second component. Same choice as memos/vaultwarden.
+---
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Daily base backup — WAL archiving already runs continuously; this pins a    ║
+# ║ fresh base each night so restores/PITR stay fast and retention can prune.   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: isley-db-daily
+  namespace: isley
+spec:
+  schedule: "0 0 3 * * *"
+  # WHY: 6-field CNPG cron (leading seconds field). 03:00 nightly — quiet hours.
+  backupOwnerReference: self
+  cluster:
+    name: isley-db
