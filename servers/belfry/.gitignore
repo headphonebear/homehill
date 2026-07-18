@@ -1,0 +1,2 @@
+# Secrets — never commit the filled-in env (Postgres password lives here).
+.env

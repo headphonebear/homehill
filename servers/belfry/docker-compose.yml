@@ -1,0 +1,86 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  belfry — Music Server (Lyrion Music Server) + reserved mk3-toolkit backend ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# Replaces the retired Ana-era stack (Jellyfin + Navidrome + Traefik removed;
+# neither app used Postgres/Dragonfly, so dropping them is dependency-free).
+#
+# Ingress note: there is deliberately NO reverse proxy here. The LMS web UI is
+# reached directly at belfry:9000. Nice-hostname + valid TLS is a SEPARATE,
+# cluster-side follow-up (Orchard Traefik IngressRoute + ExternalName, same as
+# Pi-hole). The AUDIO path never touches a proxy anyway: squeezelite players
+# talk SlimProto to belfry:3483, and the UPnP bridge streams straight to devices.
+
+services:
+  # ── Lyrion Music Server (the "brain": library + queue + control) ───────────
+  lms:
+    image: lmscommunity/lyrionmusicserver:stable
+    container_name: belfry-lms
+    restart: unless-stopped
+    # WHY host networking (NOT a bridge with -p): the bundled UPnP Bridge
+    # (squeeze2upnp) discovers DLNA renderers via SSDP *multicast*, which does
+    # NOT traverse Docker's bridge network. Without host net, 0 renderers are
+    # found (kitchen speaker / Denon / TV never appear as players). Verified.
+    network_mode: host
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      # Persisted LMS state: scanned library DB, the Material Skin + UPnP Bridge
+      # plugins, and the "no internet lookup" prefs. Declared external so the
+      # setup done on 2026-07-18 survives (see README for how to reproduce it).
+      - belfry-lms-config:/config
+      # Music is read-only; files are owned by mk3 (uid 2001) and world-readable,
+      # so LMS reads them fine as its own container user — no chown needed.
+      - /srv/music:/music:ro
+
+  # ── Reserved backend for the mk3 toolkit (LMS does NOT use these) ───────────
+  # Provisioned ahead of the Python mk3 suite (MusicBrainz/catalogs/queue).
+  # Started fresh here: the old mk3_* volumes were empty/cache-only.
+  postgres:
+    image: postgres:16-alpine
+    container_name: belfry-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-mk3}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [belfry-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    container_name: belfry-dragonfly
+    restart: unless-stopped
+    command:
+      - --maxmemory=2gb
+      - --snapshot_cron=0 * * * *   # hourly snapshot at :00
+      - --dir=/data
+    volumes:
+      - dragonfly-data:/data
+    networks: [belfry-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  # Reuse the existing volume from today's setup (holds the library + plugins +
+  # prefs). Create it once, never let compose wipe it.
+  belfry-lms-config:
+    external: true
+  postgres-data:
+  dragonfly-data:
+
+# LMS is on host net; only the mk3-toolkit backend shares this bridge so the
+# future toolkit can reach postgres/dragonfly by name.
+networks:
+  belfry-net:
+    name: belfry-network
+    driver: bridge
