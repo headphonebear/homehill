@@ -1,0 +1,48 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🎵  Music Proxy Application — HTTPS front door for the standalone LMS       ║
+# ║ Lyrion Music Server runs on belfry (ex-mk3), out-of-cluster, in            ║
+# ║ network_mode:host. This app only wires Orchard's Traefik to reverse-proxy   ║
+# ║ https://music.homehill.de → belfry:9000 using the wildcard cert, so the     ║
+# ║ Material Skin UI installs cleanly as a PWA on the Bears' phones.            ║
+# ║ See clusters/apps/music/orchard for the why.                               ║
+# ║                                                                            ║
+# ║ ⚠️ DNS prerequisite: the Pi-hole A-record `music.homehill.de` must point at  ║
+# ║    192.168.1.50 (Traefik/apple), NOT belfry (.192) — otherwise the request  ║
+# ║    never reaches the proxy and skips TLS entirely.                          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: music
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/music/orchard
+
+    helm:
+      releaseName: music
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: music
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      # WHY selfHeal:true — this app is pure stateless routing glue (an
+      # ExternalName Service + two IngressRoutes). No PVC, no Multi-Attach risk.
+      # Safe to auto-reconcile, same class as traefik/argocd/pihole.
+
+    syncOptions:
+      - CreateNamespace=true

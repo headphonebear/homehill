@@ -1,0 +1,26 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🎵  Music Proxy — Umbrella Chart for Orchard                                ║
+# ║ The music player itself does NOT run in the cluster — it lives on belfry    ║
+# ║ (the ex-mk3 box) as a standalone Docker stack: Lyrion Music Server (LMS)    ║
+# ║ in network_mode:host, answering its web UI on 192.168.1.192:9000, with      ║
+# ║ Material Skin as the default UI.                                            ║
+# ║                                                                            ║
+# ║ This chart is *only* the HTTPS front door: it lets Orchard's Traefik serve  ║
+# ║ https://music.homehill.de with the wildcard cert and reverse-proxy to       ║
+# ║ belfry's LMS web UI on :9000 — so it installs cleanly as a PWA on the       ║
+# ║ Bears' phones (Let's-Encrypt cert = trusted everywhere, no CA dance).       ║
+# ║                                                                            ║
+# ║ WHY no dependencies: there is no upstream chart to wrap — just two local     ║
+# ║ manifests (ExternalName Service → belfry, IngressRoutes). LMS stays fully    ║
+# ║ independent of the cluster; only the pretty HTTPS URL is coupled. Cluster    ║
+# ║ down? http://192.168.1.192:9000 still works on the LAN.                     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v2
+name: music-proxy-orchard
+description: HTTPS front door for the standalone Lyrion Music Server on belfry (Traefik reverse proxy)
+type: application
+version: 1.0.0
+appVersion: "stable"
+# WHY appVersion "stable": tracks the LMS docker tag running on belfry
+# (lmscommunity/lyrionmusicserver:stable). Informational only — nothing here
+# deploys LMS itself; that stack lives in servers/belfry/docker-compose.yml.

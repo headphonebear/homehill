@@ -1,0 +1,56 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ IngressRoutes for https://music.homehill.de                                ║
+# ║ Same shape as pihole/Grafana: an http route that redirects to https, and an ║
+# ║ https route that terminates TLS (wildcard via the `default` TLSStore) and   ║
+# ║ proxies to the music-external Service → belfry:9000 (Lyrion + Material Skin).║
+# ║                                                                            ║
+# ║ NOTE (websockets): Material Skin talks to LMS over CometD (long-polling on   ║
+# ║ /cometd). Traefik proxies that transparently on the same Host route — no     ║
+# ║ special config needed. If the UI ever feels "stuck / not live-updating",     ║
+# ║ that's the first thing to eyeball.                                          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+# HTTP → HTTPS redirect
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: music-http
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.musicProxy.host }}`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+      services:
+        - name: music-external
+          port: {{ .Values.musicProxy.backendPort }}
+---
+# HTTPS
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: music-https
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.musicProxy.host }}`)
+      kind: Rule
+      middlewares:
+        # HSTS + hardening headers — same cross-namespace ref into `traefik` as
+        # every other homehill route. Harmless for a standalone PWA (not iframed);
+        # if "add to home screen" ever misbehaves, this middleware is where to look.
+        - name: security-headers
+          namespace: traefik
+      services:
+        - name: music-external
+          port: {{ .Values.musicProxy.backendPort }}
+  tls:
+    # No secret in THIS namespace — the `default` TLSStore in `traefik` serves the
+    # homehill-wildcard-tls cluster-wide. Naming it explicitly is belt-and-braces.
+    secretName: homehill-wildcard-tls

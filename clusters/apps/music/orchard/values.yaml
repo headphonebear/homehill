@@ -1,0 +1,18 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Values — Music (Lyrion) HTTPS proxy                                        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+musicProxy:
+  # The public (internal) hostname Traefik answers on. MUST be a FLAT subdomain
+  # under homehill.de — multi-level (x.y.homehill.de) breaks the Hetzner DNS-01
+  # challenge that mints the wildcard cert. `music.homehill.de` is flat. ✓
+  #
+  # WHY "music" and not "belfry": belfry is the *machine* (SSH/admin). This is the
+  # *service* the Bears use and install as a PWA — `music` is what you type and
+  # remember. Same split as dovecote(host) → pihole(service).
+  host: music.homehill.de
+
+  # Where the real LMS web UI lives: belfry (the ex-mk3 box), out-of-cluster on
+  # the LAN. LMS runs in network_mode:host, so it binds belfry's own IP directly
+  # on :9000. Orchard nodes share the 192.168.1.0/24, so Traefik reaches it.
+  backendIP: "192.168.1.192"
+  backendPort: 9000

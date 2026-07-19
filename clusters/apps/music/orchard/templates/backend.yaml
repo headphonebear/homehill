@@ -1,0 +1,35 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Backend: an ExternalName Service pointing at the OUT-OF-CLUSTER LMS.        ║
+# ║                                                                            ║
+# ║ Lyrion Music Server runs on belfry (192.168.1.192), outside the cluster,    ║
+# ║ in network_mode:host on :9000. Kubernetes' native primitive for "a Service  ║
+# ║ that lives elsewhere" is type ExternalName.                                 ║
+# ║                                                                            ║
+# ║ WHY ExternalName and NOT a Service + Endpoints/EndpointSlice:               ║
+# ║ ArgoCD's default resource.exclusions ignore BOTH `Endpoints` and            ║
+# ║ `EndpointSlice` (control-plane churn reduction) — so ArgoCD would never      ║
+# ║ create the endpoint object, leaving the Service empty → Traefik 503.        ║
+# ║ ExternalName needs no endpoint object at all, sidestepping the exclusion.   ║
+# ║ (This bit us on pihole; same fix here.)                                     ║
+# ║                                                                            ║
+# ║ REQUIRES: `providers.kubernetesCRD.allowExternalNameServices: true` in the  ║
+# ║ traefik values (off by default for SSRF safety). Traefik then builds the    ║
+# ║ backend URL as http://<externalName>:<port>. A literal IP needs no DNS.     ║
+# ║                                                                            ║
+# ║ If belfry's IP ever changes, update backendIP in values.yaml.              ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: music-external
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: music-proxy
+spec:
+  type: ExternalName
+  # A literal IP: Traefik targets it directly, no cluster-DNS lookup needed.
+  externalName: {{ .Values.musicProxy.backendIP | quote }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.musicProxy.backendPort }}
