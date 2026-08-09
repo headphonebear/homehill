@@ -1,0 +1,59 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  chick — Valkey (mk3 toolkit: work-queue + MusicBrainz cache)              ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# The "forgettable" layer: the file work-queue (worker_queue) and the API/tag
+# cache (flactag + musicbrainz modules cache here). Speaks the Redis RESP
+# protocol, so the existing `redis-py` code (redis.Redis(host='localhost'))
+# talks to it unchanged.
+#
+# WHY Valkey (over Redis / Dragonfly) on this box:
+#   - drop-in for the RESP-based mk3 code (no rewrite);
+#   - Dragonfly's many-core design is wasted on a 4-core N150 — Valkey is the
+#     right weight for a queue + a small metadata cache (Dragonfly stays the
+#     pick for beefier boxes like belfry/barn; all three speak RESP, so the
+#     dev/prod difference is operational, never functional);
+#   - BSD-licensed community continuation of Redis after the 2024 SSPL move.
+
+services:
+  valkey:
+    # Pinned major (alpine) for reproducibility — same discipline as the other
+    # stacks; a redeploy never silently jumps.
+    image: valkey/valkey:8-alpine
+    container_name: chick-valkey
+    restart: unless-stopped
+
+    command:
+      - --dir
+      - /data
+      # WHY appendonly: the MusicBrainz cache is EXPENSIVE to refill — the API
+      # is rate-limited to ~1 req/s, so re-fetching from cold is a slow crawl.
+      # AOF persistence means a restart keeps the cache warm. Cheap at this scale.
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - ${VALKEY_MAXMEM:-1gb}
+      # WHY noeviction (not allkeys-lru): this one instance holds BOTH a
+      # rebuildable cache AND the work-queue. Under LRU, a full instance could
+      # silently evict queue items mid-run — losing work. The dataset is tiny
+      # vs chick's 15 GB RAM, so fail-loud-on-full beats silent data loss.
+      - --maxmemory-policy
+      - noeviction
+
+    ports:
+      # Localhost-only by default (code runs on chick via Way A). No requirepass:
+      # a localhost-bound socket needs no auth. To reach it remotely, set
+      # VALKEY_BIND=0.0.0.0 AND add `--requirepass` (mind the firewall).
+      - "${VALKEY_BIND:-127.0.0.1}:${VALKEY_PORT:-6379}:6379"
+
+    volumes:
+      - valkey-data:/data
+
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  valkey-data:

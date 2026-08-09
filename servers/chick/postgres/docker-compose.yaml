@@ -1,0 +1,59 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  chick — PostgreSQL (mk3 toolkit: the source of truth)                     ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# The relational spine of the mk3 catalog: albums / artists / tracks, keyed
+# strictly on MusicBrainz IDs (RGID, Artist-MBID, …). This is the "facts" store
+# — ownership, reference lists (RS500, 1001-Albums), and the set-arithmetic that
+# produces shopping lists all live here. (Cache/queue = Valkey; vibes = Qdrant.)
+#
+# WHY on chick: chick is the dev scratchpad. We iterate on the schema here,
+# blow it away, re-import, without touching the production music box (belfry).
+# Because every key is an MBID and the move-out path is a plain `pg_dump`,
+# "graduating" this to belfry or the cluster later is a dump+restore, not a
+# rebuild — so committing to chick now costs us nothing.
+#
+# Deploy (chick does NOT git-pull — repo is source of truth, applied by hand):
+#   cp -r servers/chick/postgres  coder@chick:~/stacks/   # or however you sync
+#   cd ~/stacks/postgres && cp .env.example .env && edit .env
+#   docker compose up -d
+
+services:
+  postgres:
+    # WHY 16-alpine (pinned, not :latest): parity with belfry's reserved
+    # `postgres:16-alpine` so a future graduation is frictionless, and alpine
+    # keeps the footprint light on the N150. Pinned = reproducible: a redeploy
+    # never silently jumps a major.
+    image: postgres:16-alpine
+    container_name: chick-postgres
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-mk3}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      - POSTGRES_DB=${POSTGRES_DB:-mk3}
+      - TZ=Europe/Berlin
+
+    ports:
+      # WHY bind to 127.0.0.1 by default: with Way A (PyCharm remote interpreter)
+      # the mk3 code runs ON chick, so it reaches Postgres over localhost — no
+      # need to expose 5432 to the LAN unauthenticated. The bind address is an
+      # env knob: the day we run tools from barn (to scan owned FLACs), flip
+      # PG_BIND to 0.0.0.0 (and mind the firewall).
+      - "${PG_BIND:-127.0.0.1}:${PG_PORT:-5432}:5432"
+
+    volumes:
+      # WHY a named volume (not a /srv bind like the barn stacks): chick is a
+      # single root partition with no /srv. Docker-managed named volume is the
+      # clean local store; portability is handled by pg_dump, not by moving this
+      # directory.
+      - postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mk3} -d ${POSTGRES_DB:-mk3}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

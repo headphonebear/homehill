@@ -1,0 +1,5 @@
+# chick — never commit real environment files.
+# Each service folder keeps a committed .env.example; the real .env (with
+# passwords / host binds) stays local. Pattern has no slash, so it matches
+# .env at any depth below servers/chick/ (postgres/, valkey/, …).
+.env
