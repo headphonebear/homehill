@@ -1,0 +1,36 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🐝 Hive Umbrella Chart for Orchard — Forgejo, the house Git forge          ║
+# ║ Wraps the official forgejo-helm chart as a dependency; local templates/     ║
+# ║ add the CNPG database + its S3 backup, the Traefik IngressRoute, and the    ║
+# ║ admin SealedSecret.                                                         ║
+# ║                                                                            ║
+# ║ NOTE the OCI repository — forgejo-helm is published to a container          ║
+# ║ registry, not a classic `index.yaml` Helm repo. `helm dependency build`     ║
+# ║ handles oci:// natively (Helm ≥ 3.8), but if you ever see "repo not found", ║
+# ║ that's the reason to check first: it's a registry pull, not an HTTP index.  ║
+# ║                                                                            ║
+# ║ After editing the dependency below: `helm dependency build` to refetch the  ║
+# ║ .tgz (gitignored — only Chart.lock is committed). ArgoCD does this server-  ║
+# ║ side automatically.                                                         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v2
+name: hive-orchard
+description: Hive — Forgejo forge at Homehill, home of the Claudes' shared stream
+type: application
+version: 1.0.0
+appVersion: "15.0.9"
+# WHY: matches the pinned upstream chart below. forgejo-helm 17.1.7 (released
+# 2026-09-17) ships Forgejo 15.0.9 — current stable at deploy time.
+
+dependencies:
+  - name: forgejo
+    repository: oci://code.forgejo.org/forgejo-helm
+    version: "17.1.7"
+    # WHY: the official chart from the Forgejo project itself, pinned — no
+    # chasing :latest. Its values are configured under the `forgejo:` key in
+    # values.yaml (subchart values are namespaced by the dependency name).
+    #
+    # ⚠️ TWO LAYERS OF NAMESPACING, and the inner one is a joke of history:
+    #    forgejo:        <- our dependency name (this file)
+    #      gitea:        <- the CHART's own key for app config
+    # Forgejo is a Gitea fork and the chart inherited the key. It is not a typo.

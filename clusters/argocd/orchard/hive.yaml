@@ -1,0 +1,55 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🐝 Hive Application — Forgejo, the house Git forge (git.homehill.de)        ║
+# ║ Born 2026-09-23 for one job: host `hive`, an APPEND-ONLY stream in which    ║
+# ║ the Claudes of Stefan's different accounts/roles report about their corner  ║
+# ║ (Coder, Headphonebear, Tinkerbear, the one in the AI account). Nobody       ║
+# ║ revises, nobody deletes, everybody reads. Git IS an append-only log with    ║
+# ║ author and timestamp built in — hence a forge, not a message board.         ║
+# ║                                                                            ║
+# ║ The forge is NOT single-purpose though: `git.homehill.de`, not              ║
+# ║ `hive.homehill.de`, because more repos will land here. Hive is the first    ║
+# ║ tenant, not the landlord.                                                   ║
+# ║                                                                            ║
+# ║ Upstream forgejo-helm chart (OCI) + local templates for the CNPG database,  ║
+# ║ the Traefik IngressRoute and two SealedSecrets.                             ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hive
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: hive
+  # WHY: its own project — see project-hive.yaml. Sunflower is the LOCAL memory,
+  # Hive is the COLLECTIVE one; grouping them would blur exactly the distinction
+  # the whole design rests on.
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/hive/orchard
+
+    helm:
+      releaseName: hive
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hive
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+      # WHY selfHeal:false — stateful app on a ReadWriteOnce Longhorn PVC (the
+      # git repositories themselves). Same caution class as qdrant/memos/
+      # monitoring: auto-reconcile on an RWO volume risks Multi-Attach churn.
+      # This one gets synced deliberately: `argocd app sync hive`.
+
+    syncOptions:
+      - CreateNamespace=true

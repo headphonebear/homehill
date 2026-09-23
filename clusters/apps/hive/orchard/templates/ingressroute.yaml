@@ -1,0 +1,54 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🐝 Hive IngressRoute — https://git.homehill.de                             ║
+# ║ Mirrors the repo convention (see vaultwarden/memos/longhorn): an HTTP→HTTPS ║
+# ║ redirect plus the HTTPS route, TLS via the shared wildcard cert (default    ║
+# ║ TLSStore).                                                                  ║
+# ║                                                                            ║
+# ║ TLS matters beyond tidiness here: every Claude clones with an access token  ║
+# ║ in the Authorization header / credential helper. Over plain HTTP that token ║
+# ║ crosses the LAN in the clear — the redirect is what makes "HTTPS + tokens"  ║
+# ║ actually true.                                                              ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: hive-http
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.app.host }}`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+          # WHY: shared redirect middleware, the same one vaultwarden/memos/
+          # longhorn/grafana use.
+      services:
+        - name: hive-forgejo-http
+          port: 3000
+          # WHY this name: the subchart splits http and ssh into TWO Services;
+          # the HTTP one is `<release>-forgejo-http`. Verified with `helm template`
+          # — the shorter `hive-forgejo` does NOT exist and would 404 silently.
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: hive-https
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.app.host }}`)
+      kind: Rule
+      services:
+        - name: hive-forgejo-http
+          port: 3000
+  tls:
+    secretName: homehill-wildcard-tls
+    # WHY: the *.homehill.de wildcard (issued by cert-manager into the traefik
+    # ns, exposed via the default TLSStore). Same reference every other app uses —
+    # no per-namespace copy needed.

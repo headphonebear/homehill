@@ -1,0 +1,92 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🐝 Hive PostgreSQL — CloudNativePG Cluster + ScheduledBackup               ║
+# ║ Single-instance PG for the Forgejo forge, with continuous WAL archiving +   ║
+# ║ daily base backups to Hetzner Object Storage (bucket `bearbackups`).        ║
+# ║                                                                            ║
+# ║ FRESH INSTALL: the Cluster is created EMPTY (bootstrap.initdb). Forgejo runs ║
+# ║ its own schema migrations on first connect, so DB + app deploy in one shot — ║
+# ║ no enabled-gate cutover dance (unlike the memos migration).                  ║
+# ║                                                                            ║
+# ║ SCOPE REMINDER: this protects the forge's METADATA (users, repo records,    ║
+# ║ issues, tokens). The git objects live on the Longhorn PVC. See the `backup` ║
+# ║ block in values.yaml for why that asymmetry is deliberate here.             ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.database.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: 1
+  # WHY: one instance. HA is a later upgrade (bump instances). Durability today =
+  # Longhorn block replication + S3 backups.
+
+  # WHY no imageName: use the operator's default PostgreSQL image
+  # (ghcr.io/cloudnative-pg/postgresql — first-party, not a bitnami image).
+
+  storage:
+    size: {{ .Values.database.storageSize }}
+    storageClass: {{ .Values.database.storageClass }}
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+    # WHY: a four-account forge idles between commits. Modest requests, a memory
+    # limit as a guardrail, no CPU limit (don't throttle checkpoints).
+
+  # ── Bootstrap: create an EMPTY database + owner role ────────────────────────
+  bootstrap:
+    initdb:
+      database: forgejo
+      owner: forgejo
+      # ╔══════════════════════════════════════════════════════════════════════╗
+      # ║ WHY these exact names: they must match gitea.config.database NAME/USER ║
+      # ║ in values.yaml. CNPG auto-generates the password into the secret        ║
+      # ║ `{{ .Values.database.name }}-app`, whose `password` key is piped into   ║
+      # ║ Forgejo as FORGEJO__database__PASSWD. Change a name here and you must   ║
+      # ║ change it there — the app will otherwise fail auth, not fail loudly.    ║
+      # ╚══════════════════════════════════════════════════════════════════════╝
+
+  # ── Continuous backup to Hetzner Object Storage (in-tree Barman) ───────────
+  backup:
+    retentionPolicy: {{ .Values.backup.retention | quote }}
+    barmanObjectStore:
+      destinationPath: {{ .Values.backup.destinationPath | quote }}
+      endpointURL: {{ .Values.backup.endpointURL | quote }}
+      s3Credentials:
+        accessKeyId:
+          name: hive-db-s3-backup
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: hive-db-s3-backup
+          key: ACCESS_SECRET_KEY
+        # WHY: references the SealedSecret in this namespace
+        # (db-s3-backup-sealedsecret.yaml). Sealed name+namespace-scoped to
+        # `hive-db-s3-backup` / `hive` — it cannot be reused elsewhere.
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+      # WHY in-tree barmanObjectStore (not the newer plugin): works on the current
+      # operator and avoids a second component. Same choice as memos/vaultwarden.
+---
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Daily base backup — WAL archiving already runs continuously; this pins a    ║
+# ║ fresh base each night so restores/PITR stay fast and retention can prune.   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ .Values.database.name }}-daily
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "0 15 3 * * *"
+  # WHY: 6-field CNPG cron (leading seconds field). 03:15 nightly — quiet hours,
+  # and offset from vaultwarden's 03:00 so two backups don't hit the same bucket
+  # and the same Longhorn disks in the same minute.
+  backupOwnerReference: self
+  cluster:
+    name: {{ .Values.database.name }}

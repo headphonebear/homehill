@@ -1,0 +1,201 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🐝 Hive — values                                                           ║
+# ║ Three blocks feed OUR local templates (database, backup, ingressroute);     ║
+# ║ the `forgejo:` block configures the upstream chart (namespaced by the       ║
+# ║ dependency name — the subchart never sees our top-level keys).              ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# ── PostgreSQL (CloudNativePG) — read by templates/database.yaml ──────────────
+database:
+  name: hive-db
+  # WHY: CNPG derives resource names from this. The read-write connection service
+  # is `<name>-rw` (hive-db-rw), and the generated app-user credentials land in
+  # the secret `<name>-app` (hive-db-app) with `username`/`password`/`uri` keys.
+  # Forgejo can't take a whole DSN, so we feed it the parts — see the
+  # additionalConfigFromEnvs block far below.
+  storageSize: 5Gi
+  # WHY: Forgejo's Postgres holds metadata only — users, repo records, issues,
+  # tokens. The actual git objects live on the Longhorn PVC (persistence, below).
+  # A four-Claude forge will not fill 5Gi; expanding later is trivial.
+  storageClass: longhorn
+
+# ── S3 backup target (Hetzner Object Storage) — read by templates/database.yaml ─
+backup:
+  destinationPath: s3://bearbackups/orchard/hive
+  # WHY: shared bucket `bearbackups`, per-app prefix (memos set the precedent).
+  endpointURL: https://hel1.your-objectstorage.com
+  retention: "30d"
+  # ⚠️ NOTE WHAT THIS DOES *NOT* COVER: this backs up the DATABASE only. The git
+  # repositories themselves sit on the Longhorn PVC and are protected by Longhorn
+  # replication, not by S3. For Hive that is an acceptable asymmetry — every
+  # Claude that clones the stream holds a full copy of the history, which is the
+  # oldest backup strategy there is. Revisit if repos land here that nobody clones.
+
+# ── Our local templates (IngressRoute) ───────────────────────────────────────
+app:
+  host: git.homehill.de
+  # WHY `git`, not `hive`: the forge is the house's, the stream is only its first
+  # tenant. More repos will land here (mk3, sunflower, homehill itself), and
+  # `hive.homehill.de` stays free for whatever the project grows into.
+  # Internal-only (homehill.de, behind the router). Flat subdomain — same Hetzner
+  # DNS-01 quirk the other apps respect. Pi-hole holds the A-record → apple
+  # (192.168.1.50).
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Upstream forgejo-helm subchart
+# ══════════════════════════════════════════════════════════════════════════════
+forgejo:
+
+  replicaCount: 1
+  # WHY: single instance. HA Forgejo needs shared RWX storage + an external cache
+  # and queue — a lot of machinery for a forge with four readers.
+
+  strategy:
+    type: Recreate
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║ WHY Recreate (chart default, restated so nobody "tidies" it away): single ║
+    # ║ replica on a ReadWriteOnce Longhorn PVC. RollingUpdate would start the new ║
+    # ║ pod BEFORE the old one releases the volume → Longhorn Multi-Attach, stuck  ║
+    # ║ rollout. Same lesson Grafana taught this cluster.                          ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+  # ── Persistence: the git repositories themselves ───────────────────────────
+  persistence:
+    enabled: true
+    claimName: hive-repositories
+    size: 10Gi
+    # WHY claimName: the chart's default is `gitea-shared-storage` — a name that
+    # tells you nothing about which app or which cluster it belongs to when you
+    # are staring at a Longhorn volume list at 2am. This one says it.
+    storageClass: longhorn
+    accessModes:
+      - ReadWriteOnce
+    # WHY: /data holds the bare repos, LFS objects, avatars and the level queue.
+    # This is the irreplaceable half of the install — Postgres only knows *about*
+    # the repos. RWO → hence selfHeal:false on the Application.
+
+  # ── We bring our own ingress (Traefik IngressRoute) ────────────────────────
+  ingress:
+    enabled: false
+    # WHY: the chart ships a standard Ingress; this cluster uses Traefik
+    # IngressRoute CRDs everywhere (templates/ingressroute.yaml) with the shared
+    # wildcard TLS.
+
+  service:
+    http:
+      type: ClusterIP
+      port: 3000
+      # WHY: reached in-cluster only, fronted by the IngressRoute.
+    ssh:
+      type: ClusterIP
+      port: 22
+      # WHY ClusterIP and not LoadBalancer/NodePort: git-over-SSH is deliberately
+      # NOT exposed. Every client here is a Claude Code session that clones over
+      # HTTPS with a per-role access token — which is also how we get separable
+      # identities in the stream (a Coder token, a Headphonebear token, …).
+      # The Service stays as a harmless ClusterIP stub; SSH is off in config below.
+
+  test:
+    enabled: false
+    # WHY: the chart's helm-test pod pulls `busybox:latest`. We don't run helm
+    # tests under ArgoCD, and an unpinned :latest in a synced app is noise.
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # `gitea:` — yes, really. Forgejo is a Gitea fork and the chart kept the key.
+  # Not a typo, not a leftover: renaming it would break every existing install.
+  # ══════════════════════════════════════════════════════════════════════════
+  gitea:
+
+    # ── Admin user: credentials from our SealedSecret ─────────────────────────
+    admin:
+      existingSecret: hive-admin
+      # WHY: the chart reads keys `username` and `password` from this secret and
+      # runs `forgejo admin user create` on first boot. Plaintext never touches
+      # Git — see templates/admin-sealedsecret.yaml for the sealing recipe.
+      email: "stefan.bachmann@gmail.com"
+      passwordMode: keepUpdated
+      # WHY keepUpdated (chart default): the admin password is re-applied from the
+      # secret on every start, so resealing the secret IS the rotation procedure.
+      # If you'd rather change it in the web UI and have the chart leave it alone,
+      # switch this to `initialOnlyNoReset`.
+
+    config:
+      APP_NAME: "Hive 🐝"
+
+      server:
+        DOMAIN: git.homehill.de
+        ROOT_URL: https://git.homehill.de/
+        # WHY: Forgejo bakes ROOT_URL into clone URLs, webhooks and OAuth
+        # redirects. Get it wrong and the UI happily shows clone URLs nobody can
+        # use. HTTPS because the IngressRoute terminates TLS.
+        DISABLE_SSH: true
+        START_SSH_SERVER: false
+        # WHY both: DISABLE_SSH turns the FEATURE off (no SSH clone URLs in the
+        # UI, no key management), but the chart still renders
+        # START_SSH_SERVER=true, which boots the built-in sshd on :2222 anyway.
+        # Verified in the rendered app.ini. A daemon nobody can reach is not a
+        # breach, it's just a process with nothing to do — so we turn it off.
+        # WHY: see service.ssh above — HTTPS + tokens is the whole access story.
+        # Setting this hides the SSH clone URL in the UI, so no Claude is offered
+        # a protocol that isn't listening.
+
+      database:
+        DB_TYPE: postgres
+        HOST: hive-db-rw:5432
+        # WHY `-rw`: CNPG's read-write service, which always points at the current
+        # primary. Never address a CNPG pod directly.
+        NAME: forgejo
+        USER: forgejo
+        # WHY these two names: they must match bootstrap.initdb in
+        # templates/database.yaml. PASSWD is NOT here on purpose — it arrives as
+        # an env var from the CNPG-generated secret (additionalConfigFromEnvs).
+
+      service:
+        DISABLE_REGISTRATION: true
+        # WHY: nobody self-registers. Accounts are created by the admin, one per
+        # role/Claude. A forge with open signup — even behind the router — is an
+        # invitation nobody sent.
+        REQUIRE_SIGNIN_VIEW: true
+        # WHY: the stream is a private conversation between Stefan and his
+        # Claudes. Internal-only is a network property, not an access policy;
+        # this makes the policy explicit rather than relying on the router.
+
+      # ── Cache / session / queue: the small-install defaults, on purpose ─────
+      cache:
+        ADAPTER: memory
+      session:
+        PROVIDER: memory
+      queue:
+        TYPE: level
+        # ╔════════════════════════════════════════════════════════════════════╗
+        # ║ WHY these and not Valkey: upstream calls memory/level "not           ║
+        # ║ recommended for production" — a warning aimed at multi-replica       ║
+        # ║ forges with many users. Hive is one pod and four readers; a Valkey    ║
+        # ║ next door would be a second stateful component bought with nothing.  ║
+        # ║ The cost is honest and small: sessions drop on pod restart (log in    ║
+        # ║ again) and the queue lives on the PVC. Chart v14 removed the bundled  ║
+        # ║ Valkey subchart anyway — if we ever need one, it's a deliberate add.  ║
+        # ╚════════════════════════════════════════════════════════════════════╝
+
+      repository:
+        DEFAULT_PRIVATE: private
+        # WHY: new repos default to private. The forge is internal, but "default
+        # to closed" is the posture that survives the day something isn't.
+
+    # ── The DB password, from the CNPG-generated secret ───────────────────────
+    additionalConfigFromEnvs:
+      - name: FORGEJO__database__PASSWD
+        valueFrom:
+          secretKeyRef:
+            name: hive-db-app
+            key: password
+        # ╔════════════════════════════════════════════════════════════════════╗
+        # ║ WHY this shape: the chart's init container runs `environment-to-ini`, ║
+        # ║ which folds FORGEJO__<section>__<KEY> env vars into app.ini AFTER the  ║
+        # ║ values above. So the password reaches [database] PASSWD without ever   ║
+        # ║ appearing in values.yaml, in Git, or in the rendered ConfigMap.        ║
+        # ║                                                                      ║
+        # ║ The `GITEA__` prefix still works as a legacy alias (same fork story as ║
+        # ║ the `gitea:` key), but Forgejo's docs name FORGEJO__ as the one to use. ║
+        # ║ Secret `hive-db-app` is created BY CNPG, not by us — nothing to seal.  ║
+        # ╚════════════════════════════════════════════════════════════════════╝

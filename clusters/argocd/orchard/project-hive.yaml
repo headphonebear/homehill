@@ -1,0 +1,41 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🐝 AppProject: hive                                                        ║
+# ║ Home of the SHARED memory — the Git forge on which the Claudes of Stefan's  ║
+# ║ several accounts/roles (Coder, Headphonebear, Tinkerbear, …) keep a common  ║
+# ║ append-only stream. Deliberately its OWN project, not `sunflower`:          ║
+# ║   sunflower = local memory (Qdrant, one Claude's recall)                    ║
+# ║   hive      = collective memory (many Claudes, one log)                     ║
+# ║ Different lifecycle, different blast radius, different story. Keep apart.   ║
+# ║                                                                            ║
+# ║ Permissive on purpose (v1) — mirrors `default`, just under its own name.    ║
+# ║ TIGHTEN LATER: once Hive has more than the forge, narrow sourceRepos to     ║
+# ║ this repo and destinations to the `hive` namespace. Every restriction added ║
+# ║ here is something ArgoCD will BLOCK if you forget to whitelist it — so we   ║
+# ║ earn that complexity when it buys us something. (Same reasoning as          ║
+# ║ project-sunflower.yaml, same trade knowingly taken.)                        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: hive
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+    # WHY: the project must exist before any Application that references it. A
+    # low wave makes app-of-apps apply this manifest before the hive app.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Hive — the shared Git forge and the Claudes' common stream
+
+  sourceRepos:
+    - '*'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
