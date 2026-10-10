@@ -68,7 +68,9 @@ sealed-secrets:
   # them live side by side in kube-system, so whoever gets one gets all.
   # With "0" the key set is frozen → ONE full backup stays complete.
   # If you ever rotate manually (keycutofftime), re-run the backup afterwards!
-  # Backup = ALL keys by label (see HOWTO below), stored in Vaultwarden.
+  # Backup = ALL keys by label, gpg-encrypted, OUTSIDE Orchard (USB stick +
+  # s3://bearbackups/orchard/dr/) — never Vaultwarden, it runs on this cluster.
+  # Full procedure: clusters/docs/SECRETS.md → "Emergency: Recover Lost Sealing Key".
   # NOTE: must be the quoted string "0" — the chart's own docs insist on quotes.
 
   # Default namespace scope: strict (SealedSecret can only be decrypted in its original namespace)

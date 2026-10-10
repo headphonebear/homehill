@@ -358,15 +358,39 @@ kubectl -n kube-system get secret \
 > **disabled** (`keyrenewperiod: "0"` in `clusters/apps/sealed-secrets/orchard/values.yaml`),
 > so one full backup stays complete. If you ever rotate manually, back up again.
 
-**Store this backup SECURELY** — in Vaultwarden (as an attachment), never in Git
-and never as a loose file inside the repo checkout (`.gitignore` is a single
-safety net; `git add -f` or `git clean -fdx` defeat it).
+**Store this backup SECURELY — and OUTSIDE Orchard.** This backup exists for the
+one case where the cluster is gone. So it must not depend on anything that runs
+*on* the cluster — **not Vaultwarden** (it lives on Orchard; its attachments sit on
+a Longhorn volume, not even in the CNPG S3 backups).
+
+Current setup (2026-10-10):
+
+| Copy | Where | Access without Orchard |
+|---|---|---|
+| 1 | USB stick → `homehill/sealed-secrets-keys-backup-YYYY-MM-DD.yaml.gpg` | physical |
+| 2 | `s3://bearbackups/orchard/dr/` (Hetzner Object Storage, hel1) | Hetzner console login, or `~/.s3cfg` on barn |
+| Passphrase | **on paper**, kept apart from the stick | — |
+
+```bash
+# Encrypt symmetrically (passphrase only — no GPG key to lose), then verify
+gpg --symmetric --cipher-algo AES256 \
+  --output <stick>/homehill/sealed-secrets-keys-backup-$(date +%F).yaml.gpg \
+  sealed-secrets-keys-backup.yaml
+gpg --decrypt <stick>/homehill/sealed-secrets-keys-backup-*.yaml.gpg | grep -c '^- apiVersion'
+s3cmd put <stick>/homehill/sealed-secrets-keys-backup-*.yaml.gpg s3://bearbackups/orchard/dr/
+shred -u sealed-secrets-keys-backup.yaml   # never leave the plaintext around
+```
+
+Never in Git, and never as a loose file inside the repo checkout (`.gitignore` is
+a single safety net; `git add -f` or `git clean -fdx` defeat it).
 
 **To restore:**
 
 ```bash
-# After cluster rebuild, restore the keys
+# After cluster rebuild, decrypt the backup (stick or S3) and restore the keys
+gpg --decrypt sealed-secrets-keys-backup-YYYY-MM-DD.yaml.gpg > sealed-secrets-keys-backup.yaml
 kubectl apply -f sealed-secrets-keys-backup.yaml
+shred -u sealed-secrets-keys-backup.yaml
 
 # Restart controller so it picks them up
 kubectl -n kube-system rollout restart deployment sealed-secrets
