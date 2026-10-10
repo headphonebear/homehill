@@ -76,5 +76,5 @@ Manifests in this repo carry heavy inline documentation — boxed `# ╔══�
 - `clusters/README.md` — cluster quick-start, access, common tasks (start here for cluster work)
 - `clusters/docs/SECRETS.md` — full SealedSecrets workflow
 - `clusters/docs/TROUBLESHOOTING.md` — battle-tested fixes (Multi-Attach, stuck syncs, webhook TLS, cert issues)
-- `clusters/docs/orchard/` — architecture, bootstrap, post-bootstrap tasks, runbooks
-- `docs/` — repo-wide philosophy, architecture, UID/GID schema, team/credits
+- `clusters/docs/orchard/` — architecture, bootstrap, post-bootstrap tasks
+- `docs/uid-schema.md` — UID/GID schema for personal accounts and service users (used on all hosts + in pod securityContexts)

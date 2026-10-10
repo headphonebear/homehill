@@ -18,13 +18,13 @@ homehill/
 ├── clusters/        # 🍎 Orchard — the K3s cluster (the active focus)
 │   ├── argocd/      #    one ArgoCD Application per app (+ the app-of-apps root)
 │   ├── apps/        #    one local Helm umbrella chart per app
-│   └── docs/        #    secrets workflow, troubleshooting, runbooks
+│   └── docs/        #    secrets workflow, troubleshooting, bootstrap
 ├── servers/         # Standalone hosts, Docker Compose, applied by hand
 │   ├── barn/        #    🌾 workstation + Docker host
 │   ├── belfry/      #    🔔 music server
 │   ├── chick/       #    🐣 development server
 │   └── dovecote/    #    🕊️ Pi-hole DNS
-├── docs/            # Older repo-wide notes (under review)
+├── docs/            # Repo-wide: UID/GID schema for users and services
 ├── CHANGELOG.md     # What changed, and why
 └── CLAUDE.md        # Working conventions for AI-assisted sessions
 ```
