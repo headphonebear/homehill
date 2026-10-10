@@ -23,6 +23,6 @@ dependencies:
     # (schema rejects them) — don't re-add them to values.yaml.
     # Handles Let's Encrypt certificate issuance, renewal, and management
 
-# NOTE: Hetzner DNS webhook will be added as a separate Application later
-# WHY: Webhook needs to be installed AFTER cert-manager is running
-# It extends cert-manager with DNS-01 challenge support for Hetzner DNS
+# NOTE: The Hetzner DNS-01 webhook is its own Application
+# (clusters/apps/cert-manager-webhook-hetzner/ + clusters/argocd/orchard/cert-manager-webhook-hetzner.yaml).
+# WHY separate: it must be installed AFTER cert-manager's CRDs/webhook are running.

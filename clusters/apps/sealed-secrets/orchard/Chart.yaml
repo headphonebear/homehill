@@ -9,7 +9,7 @@ name: sealed-secrets-orchard
 description: Sealed Secrets controller for encrypted secrets in Git at Homehill
 type: application
 version: 1.0.0
-appVersion: "0.27.2"
+appVersion: "0.34.0"
 # WHY: appVersion matches sealed-secrets controller version in chart 2.18.0
 
 dependencies:
@@ -17,7 +17,7 @@ dependencies:
     repository: https://bitnami.github.io/sealed-secrets
     version: "2.18.0"
     # WHY: Official Bitnami Sealed Secrets Helm chart
-    # This version includes sealed-secrets controller v0.27.2 (Feb 2024)
+    # Ships sealed-secrets controller v0.34.0 (verified from the running image, 2026-10-10)
     # Stable, well-tested, and widely used in production
     #
     # WHY the repo URL changed (2026-06-15): Bitnami moved the project from the

@@ -25,8 +25,7 @@ spec:
     # WHY: Public repo, HTTPS clone, no authentication needed
 
     targetRevision: main
-    # WHY: We're building the new cluster on the new_season branch
-    # Once stable, this will be merged to main
+    # WHY: main is the single source of truth — every commit to main is what runs.
 
     path: clusters/argocd/orchard
     # WHY: This directory contains all Application manifests (including this one!)
