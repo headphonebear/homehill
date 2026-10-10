@@ -33,14 +33,18 @@ global:
   # 3. Future SSH keys (if needed) will be readable by the argocd user
 
   networkPolicy:
-    create: false
-  # WHY: chart 10.0.0 flipped this default to true (upstream best practice). These
-  # would be the FIRST NetworkPolicies on Orchard (k3s enforces them via its
-  # embedded kube-router), and a bad policy here can cut ArgoCD off from itself —
-  # it couldn't sync its own fix. So: keep the 9.x behaviour for the version bump
-  # (one change at a time), then enable in a separate, easily-revertable commit.
-  # Rendered policies (2026-10-10, chart 10.2.2) look sane: server open, repo-server
-  # + redis only from ArgoCD components, metrics ports from any namespace.
+    create: true
+  # WHY: chart 10.0.0 made this the default (upstream best practice): the first
+  # NetworkPolicies on Orchard (k3s enforces them via its embedded kube-router).
+  # Kept OFF for the 3.4 bump on 2026-10-10 (one change at a time), enabled in
+  # its own commit right after. What they allow (ingress only, egress untouched):
+  #   argocd-server      ← anyone (Traefik, port-forward)
+  #   argocd-repo-server ← server, application-controller, applicationset-controller
+  #   argocd-redis       ← server, repo-server, application-controller
+  #   argocd-dex-server  ← server (http/grpc); metrics from any namespace
+  #   application-ctrl   ← metrics port only (nobody else needs to call it)
+  # ROLLBACK if ArgoCD can't reach itself (it then can't sync its own fix!):
+  #   kubectl -n argocd delete networkpolicy --all   # break-glass, then revert here
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ Main ArgoCD Chart Configuration (everything under argo-cd)                 ║
