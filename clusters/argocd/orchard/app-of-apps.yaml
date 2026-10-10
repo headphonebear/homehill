@@ -59,3 +59,27 @@ spec:
     syncOptions:
       - CreateNamespace=true
       # WHY: Create the argocd namespace if it doesn't exist (shouldn't happen, but safe)
+
+      - RespectIgnoreDifferences=true
+      # WHY: Without this, ignoreDifferences (below) only hides the diff — the next
+      # (self-heal) sync would still apply Git's finalizer list and strip ArgoCD's
+      # own pre-delete finalizers again. This makes sync keep the ignored fields.
+
+  # ╔──────────────────────────────────────────────────────────────────────────╗
+  # ║ IGNORE DIFFERENCES: ArgoCD-managed PreDelete-hook finalizers             ║
+  # ╚──────────────────────────────────────────────────────────────────────────╝
+  # WHY: Since ArgoCD 3.3, a Helm `pre-delete` hook in an app's chart becomes an
+  # ArgoCD PreDelete hook, and ArgoCD adds `pre-delete-finalizer.argocd.argoproj.io`
+  # (+ `/cleanup`) to that Application so the hook runs before deletion. Today
+  # only `storage` has one (Longhorn's `longhorn-uninstall` Job). Git doesn't list
+  # them → app-of-apps went OutOfSync, self-heal stripped them, ArgoCD re-added
+  # them: an endless ping-pong that hid real drift (found 2026-10-10, persists in 3.4.6).
+  # Narrow on purpose: only those finalizers, only on Applications —
+  # `resources-finalizer` and everything else stays enforced from Git.
+  # Side effect (fine): deleting `storage` now runs longhorn-uninstall first, which
+  # refuses unless Longhorn's deleting-confirmation-flag is set — an extra safety net.
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - '.metadata.finalizers[]? | select(startswith("pre-delete-finalizer.argocd.argoproj.io"))'
