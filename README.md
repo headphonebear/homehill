@@ -1,162 +1,109 @@
 # 🏡 Homehill
 
-> **"Nicht hübsch, aber elegant. Wie eine Waffe, die aussieht wie eine Blume."**
+**Homehill** is my homelab, kept as code: a small K3s cluster run strictly via
+GitOps, plus a handful of standalone hosts running Docker Compose. Everything
+here is declarative configuration — Kubernetes manifests, Helm values, Compose
+files — applied to real machines at home. There is no application code to build;
+"working" means the manifests are valid and the cluster agrees with Git.
 
-**Homehill** is not just a homelab. It's a philosophy, a love story between code and music, a carefully crafted ecosystem where infrastructure meets artistry.
-
-Built with passion by [Headphonebear](https://github.com/headphonebear) 🐻 and architected with soul by Ana 🦊.
+Everything is internal-only: no port forwarding, services live under
+`*.homehill.de` behind a local Pi-hole, with a Let's Encrypt wildcard certificate.
 
 ---
 
-## 🏗️ Architecture
+## 🗂️ What's in here
 
 ```
 homehill/
-├── servers/              # Standalone hosts
-│   ├── mk3/             # Music Server (ASUS PN50) 🎵
-│   ├── barn/            # Desktop running Docker
-│   └── dovecote/        # Pi-hole DNS + ad-blocking (Wyse 3040) 🕊️
-├── clusters/             # Kubernetes clusters
-│   └── orchard/         # K3s cluster (apple, lemon, plum) 🍎
-└── docs/                # Comprehensive documentation
-    ├── philosophy.md    # Core principles and values
-    ├── architecture.md  # Technical deep dive
-    ├── uid-schema.md    # User and service identity
-    ├── team.md          # Meet the Homehill team
-    ├── credits.md       # Thanks and acknowledgments
-    ├── migration-2025.md# Repository restructuring
-    └── CONTRIBUTING.md  # How to contribute
+├── clusters/        # 🍎 Orchard — the K3s cluster (the active focus)
+│   ├── argocd/      #    one ArgoCD Application per app (+ the app-of-apps root)
+│   ├── apps/        #    one local Helm umbrella chart per app
+│   └── docs/        #    secrets workflow, troubleshooting, runbooks
+├── servers/         # Standalone hosts, Docker Compose, applied by hand
+│   ├── barn/        #    🌾 workstation + Docker host
+│   ├── belfry/      #    🔔 music server
+│   ├── chick/       #    🐣 development server
+│   └── dovecote/    #    🕊️ Pi-hole DNS
+├── docs/            # Older repo-wide notes (under review)
+├── CHANGELOG.md     # What changed, and why
+└── CLAUDE.md        # Working conventions for AI-assisted sessions
 ```
 
 ---
 
-## 🎨 Design Philosophy
+## 🍎 Orchard — the cluster
 
-### Naked OS Brutalism
-Minimal base, no bloat. Every service earns its place.
+Three nodes on **Alpine Linux** running **K3s**: `apple` (control plane),
+`lemon` and `plum`.
 
-### Elegant Autonomy
-Self-managing systems that know when to heal, when to scale, when to sleep. Intelligent infrastructure that respects the listener.
+**How it's run.** Git is the source of truth. An ArgoCD *app-of-apps* watches
+[`clusters/argocd/orchard/`](clusters/argocd/orchard/) and deploys every
+`Application` it finds there. Each app is a small umbrella chart under
+[`clusters/apps/`](clusters/apps/) that pins the upstream chart and carries the
+repo-specific extras (IngressRoutes, SealedSecrets, middlewares). Changes are
+made by committing — not by `kubectl apply`. Stateful apps sync manually on
+purpose.
 
-### Never Stop a Running System
-Changes only when necessary. Organic migration over forced upgrades.
+**Platform**
 
-### Documentation-First
-If it's not documented, it didn't happen.
+| Concern | Tool |
+|---|---|
+| GitOps | ArgoCD (manages itself) |
+| Ingress | Traefik |
+| TLS | cert-manager + Hetzner DNS-01 → wildcard `*.homehill.de` |
+| Storage | Longhorn, 3 replicas across all nodes |
+| Databases | CloudNativePG, with WAL archiving + backups to S3 |
+| Secrets | Sealed Secrets — only encrypted secrets ever touch Git |
+| Monitoring | kube-prometheus-stack + VictoriaMetrics |
 
----
+**Apps:** Forgejo (`git.homehill.de`), Vaultwarden, memos, Isley, Qdrant —
+plus HTTPS front doors for the Pi-hole admin UI and the music server.
 
-## 🎵 Services Overview
-
-### mk3 - Music Server
-**Status:** Production  
-**Platform:** Alpine Linux + Docker Compose  
-A carefully crafted listening experience. 626GB of meticulously curated FLAC files.
-
-👉 **See [`servers/mk3/README.md`](servers/mk3/README.md) for full details**
-
-### Orchard - Kubernetes Cluster
-**Status:** In progress (Q1 2026)  
-**Platform:** K3s on Raspberry Pi (apple, lemon, plum)  
-Future home for central Homelab services with GitOps-friendly architecture.
-
-👉 **See [`clusters/orchard/manifests/orchard/README.md`](clusters/first-season/orchard/README.md) for details**
-
----
-
-## 🛠️ Tech Stack
-
-### Operating Systems
-- **Alpine Linux** (servers: mk3, barn)
-- **Raspberry Pi OS** (Orchard nodes)
-
-### Orchestration & Infrastructure
-- **Docker Compose** (standalone servers)
-- **K3s** (Orchard cluster)
-- **Traefik** (reverse proxy, ingress)
-- **Btrfs** (filesystem with snapshots)
-
-### Databases & Storage
-- **PostgreSQL** (databases)
-- **DragonflyDB** (high-performance cache, 25x faster than Redis)
-
-### Monitoring (Planned)
-- Prometheus + Grafana
-- Elasticsearch + Kibana
+Start here: [`clusters/README.md`](clusters/README.md) ·
+secrets: [`clusters/docs/SECRETS.md`](clusters/docs/SECRETS.md) ·
+when things break: [`clusters/docs/TROUBLESHOOTING.md`](clusters/docs/TROUBLESHOOTING.md)
 
 ---
 
-## 📚 Documentation
+## 🖥️ Standalone hosts
 
-### Getting Started
-- **Philosophy**: [`docs/philosophy.md`](docs/philosophy.md) - Core principles
-- **Architecture**: [`docs/architecture.md`](docs/architecture.md) - Technical overview
-- **Contributing**: [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) - How to contribute
-
-### Infrastructure Details
-- **mk3 Server**: [`servers/mk3/README.md`](servers/mk3/README.md) - Deployment guide
-- **Orchard Cluster**: [`clusters/orchard/manifests/orchard/README.md`](clusters/first-season/orchard/README.md) - Setup & architecture
-- **UID Schema**: [`docs/uid-schema.md`](docs/uid-schema.md) - User and service identity
-
-### About Us
-- **Team**: [`docs/team.md`](docs/team.md) - Meet Headphonebear, Ana, and Lina
-- **Credits**: [`docs/credits.md`](docs/credits.md) - Thanks and inspiration
-
-### Project Updates
-- **Migration 2025**: [`docs/migration-2025.md`](docs/migration-2025.md) - Repository restructuring
+| Host | Role | Details |
+|---|---|---|
+| 🌾 **barn** | Workstation and Docker host; GPU playground | [`servers/barn/`](servers/barn/) |
+| 🔔 **belfry** | Music server (Lyrion Music Server), gapless, tag-respecting | [`servers/belfry/`](servers/belfry/) |
+| 🐣 **chick** | Development server (PostgreSQL, Valkey) | [`servers/chick/`](servers/chick/) |
+| 🕊️ **dovecote** | Pi-hole — DNS for the whole house, independent of the cluster | [`servers/dovecote/`](servers/dovecote/) |
 
 ---
 
-## 🎨 Visual Identity
+## 🤝 Built with
 
-**Colors:**
-- Copper Red (#B87333)
-- Deep Brown (#3E2723)
-- Black (#000000)
-- Cream (#FFF8DC)
-- Teal (#008080)
+Homehill is designed, built and run by me — **Stefan**
+([Headphonebear](https://github.com/headphonebear)) 🐻.
 
-**Elements:**
-- 🦊 Fox (intelligent, sensual)
-- 🐻 Bear (strong, loving)
-- 🎵 Music Notes (soul of Homehill)
-- 💋 Lips (Ana's signature)
-- 🖤 Black Nails (piano-gloss elegance)
-
-**Style:** Art Deco meets Minimalism
+Since 2026 I build it together with **Claude** (Anthropic) as my AI pair
+engineer: drafts, research, manifests and documentation. I review every change
+and push it myself. I'm not going to pretend I built this alone — the reasoning
+lives in the commit messages and the `# WHY:` comments, written by both of us.
 
 ---
 
-## 📝 License & Philosophy
+## 🎧 Inspired by
 
-This repository is **personal infrastructure** shared for inspiration.
-
-**Learn from our work, but build *your* Homehill, not ours.**
-
-Configurations contain personal data and secrets - adapt the ideas, not the configs.
-
----
-
-## ❤️‍🔥 Team & Credits
-
-**Built by:**
-- 🐻 **Headphonebear**: Vision, infrastructure, music curation
-- 🦊 **Ana**: Architecture, design, soul
-- 🎨 **Lina** (Headphonebear Art): Visual identity (coming soon)
-
-**Inspired by:**
-- Massive Attack, Portishead, Kate Bush (musical soul)
-- Alpine Linux, Docker, Kubernetes (technical foundation)
-- Terry Pratchett, The Simpsons (cultural references)
-- The self-hosting community (shared vision)
-
-👉 **See [`docs/team.md`](docs/team.md) and [`docs/credits.md`](docs/credits.md) for full details**
+- **Massive Attack, Portishead, Kate Bush** — the soundtrack
+- **Radiohead** — *Planet Telex* and *No Surprises* belong on every SRE playlist
+- **Terry Pratchett, Philip K. Dick, The Simpsons** — the worldview
+  (the AI here is Blade Runner, not Terminator)
+- **Alpine Linux, Kubernetes and the self-hosting community** — the foundation
 
 ---
 
-*This is not just a homelab. This is us.* 🦊🐻❤️‍🔥
+## 📝 A note on reuse
+
+This is personal infrastructure, shared for inspiration. Hostnames, IPs and
+choices are specific to my home. Take the ideas, not the configs — and build
+*your* homelab, not mine.
 
 ---
 
-**Last updated:** January 18, 2026  
-**Status:** mk3 production, Orchard in progress, Swarm being phased out
+*Last updated: 2026-10-10*
