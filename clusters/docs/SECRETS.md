@@ -339,23 +339,37 @@ kubectl apply -f my-sealed-secret.yaml
 
 **Scenario:** Cluster reinstalled, old SealedSecrets can't be decrypted.
 
-**The sealing key is stored in the cluster:**
+**The sealing keys are stored in the cluster — plural.** The controller may hold
+several keys (`sealed-secrets-key`, `sealed-secrets-key2ctpt`, …) and `kubeseal`
+always seals with the newest one. Back up **all of them, by label** — never just
+the one named `sealed-secrets-key`:
 
 ```bash
-# Backup sealing key BEFORE disaster
-kubectl -n kube-system get secret sealed-secrets-key -o yaml > sealed-secrets-key-backup.yaml
+# Backup ALL sealing keys BEFORE disaster (select by label, not by name!)
+kubectl -n kube-system get secret \
+  -l sealedsecrets.bitnami.com/sealed-secrets-key \
+  -o yaml > sealed-secrets-keys-backup.yaml
 ```
 
-**Store this backup SECURELY** (not in Git! Use 1Password, Bitwarden, etc.)
+> ⚠️ **Lesson learned (2026-10-10):** this section used to back up only the
+> secret named `sealed-secrets-key`. With the chart's default 30-day key rotation,
+> that file ended up matching **1 of 8** keys — everything sealed since March
+> would have been unrecoverable after a total cluster loss. Rotation is now
+> **disabled** (`keyrenewperiod: "0"` in `clusters/apps/sealed-secrets/orchard/values.yaml`),
+> so one full backup stays complete. If you ever rotate manually, back up again.
+
+**Store this backup SECURELY** — in Vaultwarden (as an attachment), never in Git
+and never as a loose file inside the repo checkout (`.gitignore` is a single
+safety net; `git add -f` or `git clean -fdx` defeat it).
 
 **To restore:**
 
 ```bash
-# After cluster rebuild, restore the key
-kubectl apply -f sealed-secrets-key-backup.yaml
+# After cluster rebuild, restore the keys
+kubectl apply -f sealed-secrets-keys-backup.yaml
 
-# Restart controller
-kubectl -n kube-system rollout restart deployment sealed-secrets-controller
+# Restart controller so it picks them up
+kubectl -n kube-system rollout restart deployment sealed-secrets
 ```
 
 Now old SealedSecrets will decrypt correctly.
