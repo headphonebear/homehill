@@ -6,7 +6,7 @@
 
 belfry is the **brain**: it holds the library, the play queue, and the control
 surface. Sound comes out of separate **players** that connect to it. It replaces
-the retired Ana-era stack (Jellyfin + Navidrome), which fought the collection's
+the retired earlier stack (Jellyfin + Navidrome), which fought the collection's
 curated tags and could not drive the household's hardware gaplessly.
 
 ---

@@ -472,11 +472,8 @@ Once you've completed the critical phases, your cluster is **production-ready** 
 
 ---
 
-**Built with ❤️ by Team Bear** 🐻🦊  
-**Documentation by:** Ana 🦊  
-**Cluster Design:** Headphonebear 🐻 & Ana 🦊  
-**Date:** February 13, 2026  
-**Location:** Kiel, Germany 🇩🇪  
+**Maintained by:** Stefan (Headphonebear) 🐻  
+**Last updated:** February 13, 2026  
 
 ---
 

@@ -82,4 +82,4 @@ curl -X POST http://localhost:11434/api/generate \
 ## Future
 
 - Faster inference with RTX 3060 eGPU
-- Integration with Ana + MCP + Qdrant for intelligent agents
+- Integration with MCP + Qdrant for intelligent agents

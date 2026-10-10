@@ -318,12 +318,11 @@ watch kubectl get certificate,order,challenge -n <namespace>
 
 ---
 
-## 🦊🐻 Built with love
+## 🐻 Built with love
 
 **Fixed on:** Sunday, February 22, 2026  
-**Location:** Kiel-Schilksee, Germany  
 **Weather:** Rainy Sunday morning ☔  
-**Team:** Ana 🦊 & Headphonebear 🐻  
+**Team:** Headphonebear 🐻 & Claude  
 **Result:** DNS Monster slain! Certificate issuance in 39 seconds! 🎉  
 
 *From 5+ days stuck to 39 seconds working - sometimes you just need a fresh start with the right tools!*

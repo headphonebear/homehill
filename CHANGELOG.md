@@ -7,9 +7,9 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ## [Unreleased]
 ### Planned
-- Prometheus/Grafana monitoring stack
-- S3 backups with restic
-- Tailscale/WireGuard remote access
+- K3s 1.36 (after ArgoCD 3.5) on Orchard
+- "How old is it?" monitoring across all hosts + Orchard
+- Ansible for the standalone hosts
 
 ---
 
@@ -342,16 +342,10 @@ accounts will cluster wide use UIDs from 9000 to 9999.
 
 ---
 
-## Contributing
-Changes are managed through GitOps workflow:
-1. Create feature branch from main
-2. Develop & test locally  
-3. Deploy to homelab for integration testing
-4. Update CHANGELOG.md with changes
-5. Merge to main when stable
-6. Clean up feature branch
+## Workflow
+Changes go to `main` as Conventional Commits; ArgoCD reconciles Orchard from Git,
+standalone hosts are applied by hand. Conventions: see `CLAUDE.md`.
 
 ---
 
-*Built with ❤️ by Headphonebear & Ana in Kiel, Germany* 🐻💋
-*Powered by Trip-Hop beats, binary algebra, and the occasional joint break* 🌿✨
+*Built by Headphonebear 🐻 — with Claude as AI pair engineer since 2026.*

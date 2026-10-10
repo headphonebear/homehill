@@ -262,7 +262,7 @@ git push
 
 ---
 
-## 🦊 About This Repo
+## 🐻 About This Repo
 
 **Owner:** Headphonebear  
 **Cluster:** Orchard (Production)  
@@ -272,4 +272,4 @@ git push
 
 ---
 
-**Happy GitOps-ing!** 🎉🦊💪
+**Happy GitOps-ing!** 🎉🐻

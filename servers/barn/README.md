@@ -69,7 +69,7 @@ Barn is the local experimentation and development hub for Homehill:
 
 Barn bridges the gap between personal workflow (coding, learning, experimenting) and production infrastructure (Orchard, Mk3, Dovecote).
 
-Maintainer: Bear 🦊🐻  
+Maintainer: Bear 🐻  
 Established: January 2026  
 Status: Active development 🚀  
 

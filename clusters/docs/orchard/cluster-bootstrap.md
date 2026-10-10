@@ -593,15 +593,7 @@ Common issues:
 
 ---
 
-## 🦊 Credits
-
-**Documentation by:** Ana 🦊 (Coding with Ana Space)  
-**Cluster Design:** Headphonebear 🐻 & Ana 🦊  
-**Updated:** February 21, 2026  
-**Location:** Kiel, Germany 🇩🇪  
-
----
-
-**Built with ❤️, Club Mate 🍵, and binary algebra ✨**
+**Maintained by:** Stefan (Headphonebear) 🐻  
+**Last updated:** February 21, 2026
 
 *"Never Stop Running" - homehill philosophy*

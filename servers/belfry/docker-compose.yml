@@ -2,7 +2,7 @@
 # ║  belfry — Music Server (Lyrion Music Server) + reserved mk3-toolkit backend ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
-# Replaces the retired Ana-era stack (Jellyfin + Navidrome + Traefik removed;
+# Replaces the retired earlier stack (Jellyfin + Navidrome + Traefik removed;
 # neither app used Postgres/Dragonfly, so dropping them is dependency-free).
 #
 # Ingress note: there is deliberately NO reverse proxy here. The LMS web UI is
