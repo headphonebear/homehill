@@ -67,6 +67,18 @@ argocd app sync <app-name>     # manual sync (required for selfHeal:false apps l
 docker compose -f servers/<host>/<service>/docker-compose.yaml up -d
 ```
 
+## Permissions (Claude Code)
+
+`.claude/settings.json` (committed) holds a deliberately **small** allow list:
+read-only cluster queries (`kubectl get/describe/logs`), local chart rendering
+(`helm template/lint/dependency`), node maintenance (`kubectl drain/cordon/uncordon`
+— the auto-mode classifier blocks drain otherwise), and the Outline search.
+Everything that changes or deletes state — `kubectl apply/patch/delete`, ssh, sudo,
+curl, pushes — still asks. `.claude/settings.local.json` is intentionally empty;
+it was reset on 2026-10-10 after "always allow" clicks had piled up 136 one-off
+rules. When an approval prompt feels unnecessary, Stefan says so and the rule
+gets added here — with a reason, not by clicking.
+
 ## Style
 
 Manifests in this repo carry heavy inline documentation — boxed `# ╔══╗` headers and `# WHY:` comments explaining the *reasoning* behind non-obvious choices. Match that density when editing existing files; future-you debugging at 2am is the audience. Commit messages follow Conventional Commits (`feat(scope):`, `fix(scope):`, `add:`, `update:`).
