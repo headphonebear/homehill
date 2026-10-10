@@ -4,19 +4,14 @@
 # ║                                                                            ║
 # ║ IMPORTANT NOTES:                                                           ║
 # ║ - This config is for the PUBLIC homehill repo (no SSH keys needed)         ║
-# ║ - Domain: argocd.homehill.de (with real DNS + LetsEncrypt)         ║
-# ║ - Ingress disabled initially (access via port-forward during bootstrap)    ║
-# ║ - Traefik ingress will be added later via ArgoCD itself                    ║
+# ║ - Domain: argocd.homehill.de (Pi-hole DNS + wildcard LE cert)              ║
+# ║ - Exposed via Traefik IngressRoute (templates/ingressroute.yaml)           ║
+# ║ - ArgoCD manages itself (clusters/argocd/orchard/argocd.yaml)              ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
-# ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ Namespace Override                                                         ║
-# ╚════════════════════════════════════════════════════════════════════════════╝
-
-# CRITICAL: Tell the chart to deploy into 'argocd' namespace
-# WHY: Ensures all ArgoCD components (server, controller, repo-server) land in argocd NS
-# Without this, Helm v9.4.1 defaults to 'default' namespace
-namespaceOverride: "argocd"
+# NOTE (2026-10-10): a top-level `namespaceOverride: "argocd"` used to sit here.
+# It sat OUTSIDE the `argo-cd:` key, so the subchart never saw it — the namespace
+# comes from the Application's destination (argocd). Removed as dead config.
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ Global Configuration                                                       ║
@@ -24,8 +19,8 @@ namespaceOverride: "argocd"
 
 global:
   domain: 'argocd.homehill.de'
-  # WHY: This domain will be used for ArgoCD Ingress (later via Traefik)
-  # This is a real domain with DNS pointing to the Orchard cluster
+  # WHY: Used by the chart for server URLs/links. `global:` is the one top-level
+  # block Helm DOES pass down to subcharts.
 
   securityContext:
     runAsUser: 999
@@ -60,6 +55,8 @@ argo-cd:
   configs:
     params:
       server.insecure: true
+      # WHY: TLS terminates at Traefik; argocd-server speaks plain HTTP behind it.
+      # (This is the server.insecure that actually takes effect.)
 
     cm:
       # WHY: This tells ArgoCD where to find the Git repository for syncing
@@ -163,15 +160,6 @@ argo-cd:
     enabled: true
 
   # ╔────────────────────────────────────────────────────────────────────────╗
-  # ║ Global Parameters (passed to all ArgoCD components)                    ║
-  # ╚────────────────────────────────────────────────────────────────────────╝
-
-  params:
-    application.instanceLabelKey: argocd.argoproj.io/instance
-    # WHY: This label is used to track which Application owns which resources
-    # Essential for ArgoCD's garbage collection and pruning
-
-  # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ CRD Installation                                                       ║
   # ╚────────────────────────────────────────────────────────────────────────╝
 
@@ -185,18 +173,14 @@ argo-cd:
   # ╚────────────────────────────────────────────────────────────────────────╝
 
   server:
-    # WHY: Run in secure mode (require HTTPS)
-    # Set to 'true' only if terminating TLS outside ArgoCD (e.g., at Traefik)
-    insecure: true
-
     service:
-      # WHY: ClusterIP (internal only) - we'll expose via Ingress later
-      # No need for LoadBalancer in a homelab with Traefik handling ingress
+      # WHY: ClusterIP (internal only) — exposed via the Traefik IngressRoute
+      # in templates/ingressroute.yaml. No LoadBalancer needed.
       type: ClusterIP
 
     ingress:
-      # WHY: Disabled during bootstrap - we access ArgoCD via port-forward first
-      # Once ArgoCD is managing itself, we'll add a Traefik IngressRoute via GitOps
+      # WHY: We use a Traefik IngressRoute CRD (templates/ingressroute.yaml),
+      # not a Kubernetes Ingress — so the chart's own Ingress stays off.
       enabled: false
 
   # ╔────────────────────────────────────────────────────────────────────────╗
@@ -245,37 +229,18 @@ argo-cd:
         memory: 512Mi
 
   # ╔────────────────────────────────────────────────────────────────────────╗
-  # ║ Application Controller Settings                                        ║
+  # ║ Dead config removed 2026-10-10 (never read by the chart)                ║
   # ╚────────────────────────────────────────────────────────────────────────╝
-
-  applicationController:
-    # WHY: Enable Prometheus metrics for monitoring ArgoCD health
-    # Disable rules (alerting) for now - add later when we have Prometheus/Grafana
-    metrics:
-      enabled: true
-      rules:
-        enabled: false
-
-  # ╔────────────────────────────────────────────────────────────────────────╗
-  # ║ RBAC Configuration                                                     ║
-  # ╚────────────────────────────────────────────────────────────────────────╝
-
-  rbac:
-    # WHY: Enable RBAC to control access to ArgoCD resources
-    create: true
-
-    # WHY: Default policy - users not explicitly granted permissions get readonly
-    # This is a safe default for multi-user environments
-    policyDefault: "role:readonly"
-
-    # WHY: Define admin role with full access
-    # The admin user (created at install) gets this role automatically
-    policyRules:
-      - p, role:admin, applications, *, */*, allow
-      - p, role:admin, accounts, *, *, allow
-      - p, role:admin, repositories, *, *, allow
-      - p, role:admin, clusters, *, *, allow
-      - p, role:admin, projects, *, *, allow
+  # Found while rendering the 3.4 upgrade: these keys don't exist in the argo-cd
+  # chart, so the rendered manifests were identical with or without them.
+  # - `params:` (top of argo-cd) — real home is `configs.params`; the value
+  #   (application.instanceLabelKey) is the chart default anyway.
+  # - `server.insecure` — the setting that works is configs.params.server.insecure.
+  # - `applicationController.metrics` — real key is `controller.metrics`. Metrics
+  #   are therefore OFF today; enabling them (+ ServiceMonitor) is a monitoring todo.
+  # - `rbac.policyDefault/policyRules` — real home is `configs.rbac`. The rendered
+  #   argocd-rbac-cm was EMPTY all along. Fine today: the only account is the
+  #   built-in `admin`, which has the built-in role:admin. More users → configs.rbac.
 
   # ╔────────────────────────────────────────────────────────────────────────╗
   # ║ Notification & Webhook Settings                                        ║
