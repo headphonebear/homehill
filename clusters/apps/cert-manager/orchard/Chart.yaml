@@ -9,16 +9,18 @@ name: cert-manager-orchard
 description: Automated TLS certificate management for Orchard cluster at Homehill
 type: application
 version: 1.0.0
-appVersion: "1.20.4"
+appVersion: "1.21.2"
 # WHY: appVersion matches cert-manager's actual version
 
 dependencies:
   - name: cert-manager
     repository: https://charts.jetstack.io
-    version: "1.20.4"
+    version: "1.21.2"
     # WHY: Official cert-manager Helm chart
-    # WHY 1.20.x: cert-manager recommends ONE minor version per upgrade, so
-    # 1.19 -> 1.20 -> 1.21 (1.19 EOL 2026-07-08). 1.20 supports K8s 1.32-1.35.
+    # WHY 1.21.x: supports K8s 1.33-1.36 (needed before Orchard moves to 1.36).
+    # Upstream recommends ONE minor version per upgrade — reached via 1.20.4
+    # on 2026-10-10. 1.21 removed prometheus.servicemonitor.targetPort/path
+    # (schema rejects them) — don't re-add them to values.yaml.
     # Handles Let's Encrypt certificate issuance, renewal, and management
 
 # NOTE: Hetzner DNS webhook will be added as a separate Application later
