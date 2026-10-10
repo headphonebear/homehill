@@ -13,6 +13,41 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-10-10] "Autumn Clean" 🍂
+First day of autumn vacation, rain outside: Orchard brought up to date, two silent
+long-standing bugs fixed, and the repo made presentable.
+
+### Changed
+- **Node OS** on apple/lemon/plum: Alpine 3.23.3 → 3.23.6, kernel 6.18.13 → 6.18.55 (drain → upgrade → reboot, one node at a time; Longhorn back to healthy before the next)
+- **K3s** 1.34.4 → 1.34.12 → **1.35.9** (1.34 upstream EOL 2026-10-27)
+- **ArgoCD** chart 9.4.1 → 10.2.2 (v3.3.0 → **v3.4.6**; 3.3 out of support, CVEs)
+- **cert-manager** 1.19.3 → 1.20.4 → **1.21.2** (one minor per step; 1.19 EOL)
+- **Longhorn** 1.11.1 → **1.11.3** (engines upgraded live via `concurrentAutomaticEngineUpgradePerNodeLimit`)
+- **Sealed Secrets**: key rotation disabled (`keyrenewperiod: "0"`)
+
+### Added
+- ArgoCD **NetworkPolicies** — the first on the cluster
+- `app-of-apps`: narrow `ignoreDifferences` for ArgoCD-managed PreDelete finalizers
+- CNPG `nodeMaintenanceWindow` as a documented toggle for drain-based maintenance
+- Sealed-secrets **DR backup**: all keys, gpg-encrypted, on USB stick + Hetzner S3 — outside Orchard
+
+### Fixed
+- K3s server args contained a stray `'rm' '-r'` since bootstrap, so every flag after it was ignored → `local-path` ran and there were **two default StorageClasses**; `--disable local-storage` now effective
+- **DR gap:** the saved sealing key matched only 1 of 8 cluster keys (30-day rotation + backup-by-name in `SECRETS.md`); restore command named the wrong deployment
+- `app-of-apps` OutOfSync ping-pong (PreDelete finalizers vs. self-heal)
+- Wildcard renewal verified end to end after the upgrades (~3 min)
+
+### Removed
+- Dead ArgoCD values keys (render-identical), 10 placeholder READMEs, the old `sealing-key.key`
+- `docs/`: 8 obsolete pre-Orchard documents; `uid-schema.md` rewritten in English without AI personas
+
+### Documentation
+- New `README.md` — accurate overview, honest credits (Stefan, with Claude as AI pair engineer)
+- Persona credits and location removed repo-wide; the Feb 2026 Hetzner DNS-01 fix credited correctly
+- Outline: new "🔑 Orchard — Sealed-Secrets-Schlüssel: Notfall-Backup (verifiziert)"
+
+---
+
 ## [2026-07-16] "Swarm Teardown" 🐝
 ### Added
 - `servers/dovecote/` — Pi-hole (Core v6.4.3) migrated to the Dell Wyse 3040 as a standalone Docker host (host networking); compose + READMEs now under source control
