@@ -25,6 +25,17 @@ spec:
   # whole Docker Hub sunset saga doesn't touch us here). A pg_dump from the
   # older swarm PG restores cleanly into CNPG's newer major.
 
+  # ── NODE MAINTENANCE TOGGLE ─────────────────────────────────────────────────
+  # WHY: with instances:1, CNPG's primary PDB (minAvailable:1, 0 disruptions
+  # allowed) blocks `kubectl drain` forever. inProgress:true makes CNPG drop that
+  # PDB so the drain can evict the pod; reusePVC:true brings it back on the SAME
+  # Longhorn PVC (on whichever node is free) instead of re-cloning from a replica
+  # — which a single instance has none of. Expect a short DB outage per drain.
+  # Flip inProgress back to false after the maintenance run (CNPG restores the PDB).
+  nodeMaintenanceWindow:
+    inProgress: true
+    reusePVC: true
+
   storage:
     size: {{ .Values.database.storageSize }}
     storageClass: {{ .Values.database.storageClass }}
