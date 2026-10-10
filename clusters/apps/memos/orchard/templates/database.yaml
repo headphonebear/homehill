@@ -31,9 +31,10 @@ spec:
   # PDB so the drain can evict the pod; reusePVC:true brings it back on the SAME
   # Longhorn PVC (on whichever node is free) instead of re-cloning from a replica
   # — which a single instance has none of. Expect a short DB outage per drain.
-  # Flip inProgress back to false after the maintenance run (CNPG restores the PDB).
+  # USAGE: set inProgress:true + push/sync BEFORE draining nodes; back to false
+  # after the run (CNPG restores the PDB). Last used: 2026-10-10 (OS + K3s 1.35).
   nodeMaintenanceWindow:
-    inProgress: true
+    inProgress: false
     reusePVC: true
 
   storage:
