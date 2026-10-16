@@ -29,9 +29,13 @@ UID and GID are always the same number.
 | `tinkerbear` | 2009 | 🛠️ Tinkering, 3D printing, indoor gardening 🌿 |
 | `stefan` | 2010 | 📷 "The Stefan" — family photos, personal documents |
 | `tinkerbearin` | 3009 | 🎨 Frau Bär — 3D printing and painting |
+| `bearin` | 3012 | 🐻 Frau Bär — "everything for now", home of her own Claude (owlhome) |
 
-`coder` (2003) is the account used on barn and chick, and the one AI-assisted
-sessions run as.
+The two personal ranges mirror each other: `tinkerbear` 2009 ↔ `tinkerbearin`
+3009, `bearin` 3012 ↔ `bear` 2012 (decided, not created yet).
+
+`coder` (2003) is the account used on barn, chick and owlhome, and the one
+AI-assisted sessions run as.
 
 ## Service users
 
