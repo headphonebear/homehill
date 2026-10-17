@@ -26,8 +26,10 @@ UID and GID are always the same number.
 | `sounds` | 2005 | 🎛️ Music tinkering, synthesizers |
 | `misty` | 2006 | 🕶️ Websurf account — the sandbox for the toxic corners of the web (Tor, proxy, no logged-in browser) |
 | `ai` | 2007 | 🔬 AI lab |
+| `playbear` | 2008 | 💤 Inactive — exists on barn (since 2026-01), role not written down yet |
 | `tinkerbear` | 2009 | 🛠️ Tinkering, 3D printing, indoor gardening 🌿 |
 | `stefan` | 2010 | 📷 "The Stefan" — family photos, personal documents |
+| `film` | 2011 | 💤 Inactive — exists on barn (since 2026-01), role not written down yet |
 | `tinkerbearin` | 3009 | 🎨 Frau Bär — 3D printing and painting |
 | `bearin` | 3012 | 🐻 Frau Bär — "everything for now", home of her own Claude (owlhome) |
 
@@ -36,6 +38,11 @@ The two personal ranges mirror each other: `tinkerbear` 2009 ↔ `tinkerbearin`
 
 `coder` (2003) is the account used on barn, chick and owlhome, and the one
 AI-assisted sessions run as.
+
+Accounts live only where they're used: `bearin` exists on owlhome only (not on
+barn — decided 2026-10-17, add it when she needs something there).
+`tinkerbearin` also exists on barn, for a historical reason unrelated to today's
+setup.
 
 ## Service users
 

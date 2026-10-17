@@ -13,6 +13,22 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-10-17] "The Bärin Moves In" 🦉
+Frau Bär gets her own home on owlhome — and her own Claude.
+
+### Added
+- **owlhome** (`owlhome.homehill.de`, 192.168.1.144 fixed in router): Frau Bär's PC, a GMKtec NucBox K11 like barn (no eGPU). Host profile in Outline (`Homehill` → "🦉 owlhome — Hardware- & Host-Profil")
+- **`bearin` 3012** on owlhome: her "everything for now" account and home of her Claude (`~/library`). Not on barn — accounts live only where they're used
+- **`coder` 2003** on owlhome: key-only login, `NOPASSWD` sudo in its own `/etc/sudoers.d/coder` (removable on its own); `janitor` stays the human admin
+- **Claude desktop app + Claude Code** on owlhome from Anthropic's apt repo (`stable`), same repo + key as barn
+- `docs/uid-schema.md`: `bearin`, mirrored 2000/3000 ranges, inactive `playbear` 2008 + `film` 2011
+
+### Decided
+- **No `apt-mark hold`** for the Claude packages: a hold is silent standstill (`apt upgrade` skips it, nobody notices it aging). Hosts stay in sync via a shared update rhythm instead. Version pinning stays the rule for Orchard images
+- **SSH password login stays on** on owlhome for now — internal-only network. Must be turned off at the latest once there's an external IP
+
+---
+
 ## [2026-10-10] "Autumn Clean" 🍂
 First day of autumn vacation, rain outside: Orchard brought up to date, two silent
 long-standing bugs fixed, and the repo made presentable.
