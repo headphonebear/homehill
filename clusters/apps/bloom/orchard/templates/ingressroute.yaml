@@ -1,0 +1,61 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ IngressRoutes for https://bloom.homehill.de                                ║
+# ║ Same shape as pihole/music: an http route that redirects to https, and an   ║
+# ║ https route that terminates TLS (wildcard via the `default` TLSStore) and   ║
+# ║ proxies to the bloom-external Service → barn:7801 (SwarmUI).                ║
+# ║                                                                            ║
+# ║ NOTE (websockets): SwarmUI streams generation progress + live previews over ║
+# ║ WebSockets on the same Host route. Traefik passes the Upgrade through       ║
+# ║ transparently — no special config needed. If the UI generates but shows no  ║
+# ║ live previews / progress, that's the first thing to eyeball.               ║
+# ║                                                                            ║
+# ║ NOTE (uploads): SwarmUI accepts request bodies up to 200 MB                ║
+# ║ (MaxNetworkRequestMegabytes — init images etc.). WHY no buffering/limit     ║
+# ║ middleware here: Traefik sets no body-size limit by default. Adding one     ║
+# ║ (e.g. a `buffering` middleware) would silently break big uploads.          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+# HTTP → HTTPS redirect
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: bloom-http
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`{{ .Values.bloomProxy.host }}`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+      services:
+        - name: bloom-external
+          port: {{ .Values.bloomProxy.backendPort }}
+---
+# HTTPS
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: bloom-https
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.bloomProxy.host }}`)
+      kind: Rule
+      middlewares:
+        # HSTS + hardening headers — same cross-namespace ref into `traefik` as
+        # every other homehill route. Includes frameDeny — fine, SwarmUI is a
+        # top-level app, never iframed.
+        - name: security-headers
+          namespace: traefik
+      services:
+        - name: bloom-external
+          port: {{ .Values.bloomProxy.backendPort }}
+  tls:
+    # No secret in THIS namespace — the `default` TLSStore in `traefik` serves the
+    # homehill-wildcard-tls cluster-wide. Naming it explicitly is belt-and-braces.
+    secretName: homehill-wildcard-tls

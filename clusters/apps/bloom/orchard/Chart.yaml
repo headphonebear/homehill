@@ -1,0 +1,29 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌸  Bloom Proxy — Umbrella Chart for Orchard                                ║
+# ║ `bloom` is the Stable Diffusion service: SwarmUI running natively on barn   ║
+# ║ as the systemd unit `bloom.service` (user `ai`, owned + administered by the ║
+# ║ `ai` account), answering plain HTTP on 192.168.1.165:7801.                  ║
+# ║                                                                            ║
+# ║ This chart is *only* the HTTPS front door: it lets Orchard's Traefik serve  ║
+# ║ https://bloom.homehill.de with the wildcard cert and reverse-proxy to       ║
+# ║ barn:7801. Third twin of pihole + music — same recipe, nothing new.         ║
+# ║                                                                            ║
+# ║ WHY no dependencies: there is no upstream chart to wrap — just two local     ║
+# ║ manifests (ExternalName Service → barn, IngressRoutes). SwarmUI stays fully  ║
+# ║ independent of the cluster; only the pretty HTTPS URL is coupled. Cluster    ║
+# ║ down? http://192.168.1.165:7801 still works on the LAN.                     ║
+# ║                                                                            ║
+# ║ AUTH lives in SwarmUI itself (AuthorizationRequired: true), NOT here. Its   ║
+# ║ localhost bypass only applies to real loopback without X-Forwarded-For —    ║
+# ║ Traefik always sets that header, so every request via this route must log   ║
+# ║ in. (Verified by `ai` 2026-10-17.)                                          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v2
+name: bloom-proxy-orchard
+description: HTTPS front door for SwarmUI (Stable Diffusion) on barn (Traefik reverse proxy)
+type: application
+version: 1.0.0
+appVersion: "native"
+# WHY appVersion "native": SwarmUI is not a container — it runs self-contained
+# from /srv/ai/SwarmUI on barn via systemd. Informational only; nothing here
+# deploys SwarmUI itself (unit + launcher → servers/barn/bloom/, coming from `ai`).

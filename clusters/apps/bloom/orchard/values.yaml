@@ -1,0 +1,20 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Values — Bloom (SwarmUI) HTTPS proxy                                       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+bloomProxy:
+  # The public (internal) hostname Traefik answers on. MUST be a FLAT subdomain
+  # under homehill.de — multi-level (x.y.homehill.de) breaks the Hetzner DNS-01
+  # challenge that mints the wildcard cert. `bloom.homehill.de` is flat. ✓
+  #
+  # WHY "bloom" and not "barn" / "swarmui": barn is the *machine* (SSH/admin),
+  # SwarmUI is the *software*. `bloom` is the *service* the Bears use — same
+  # split as dovecote(host) → pihole(service), belfry(host) → music(service).
+  host: bloom.homehill.de
+
+  # Where the real SwarmUI lives: barn, out-of-cluster on the LAN, bound to
+  # 0.0.0.0:7801. Orchard nodes share the 192.168.1.0/24, so Traefik reaches it.
+  #
+  # ⚠️ barn gets its IP via DHCP — this literal only holds as long as the
+  # router reservation for barn does. If barn ever moves, update it here.
+  backendIP: "192.168.1.165"
+  backendPort: 7801

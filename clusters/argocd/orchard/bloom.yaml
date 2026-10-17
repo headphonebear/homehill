@@ -1,0 +1,47 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌸  Bloom Proxy Application — HTTPS front door for SwarmUI on barn          ║
+# ║ SwarmUI (Stable Diffusion) runs natively on barn as bloom.service, out of   ║
+# ║ the cluster, owned by the `ai` account. This app only wires Orchard's       ║
+# ║ Traefik to reverse-proxy https://bloom.homehill.de → barn:7801 using the    ║
+# ║ wildcard cert. See clusters/apps/bloom/orchard for the why.                ║
+# ║                                                                            ║
+# ║ ⚠️ DNS prerequisite: the Pi-hole A-record `bloom.homehill.de` must point at  ║
+# ║    192.168.1.50 (Traefik/apple), NOT barn (.165) — otherwise the request    ║
+# ║    never reaches the proxy and skips TLS entirely.                          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bloom
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/bloom/orchard
+
+    helm:
+      releaseName: bloom
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bloom
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      # WHY selfHeal:true — this app is pure stateless routing glue (an
+      # ExternalName Service + two IngressRoutes). No PVC, no Multi-Attach risk.
+      # Safe to auto-reconcile, same class as traefik/argocd/pihole/music.
+
+    syncOptions:
+      - CreateNamespace=true

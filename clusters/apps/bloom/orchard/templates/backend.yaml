@@ -1,0 +1,35 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Backend: an ExternalName Service pointing at the OUT-OF-CLUSTER SwarmUI.    ║
+# ║                                                                            ║
+# ║ SwarmUI runs on barn (192.168.1.165), outside the cluster, as the systemd   ║
+# ║ unit bloom.service on :7801. Kubernetes' native primitive for "a Service    ║
+# ║ that lives elsewhere" is type ExternalName.                                 ║
+# ║                                                                            ║
+# ║ WHY ExternalName and NOT a Service + Endpoints/EndpointSlice:               ║
+# ║ ArgoCD's default resource.exclusions ignore BOTH `Endpoints` and            ║
+# ║ `EndpointSlice` (control-plane churn reduction) — so ArgoCD would never      ║
+# ║ create the endpoint object, leaving the Service empty → Traefik 503.        ║
+# ║ ExternalName needs no endpoint object at all, sidestepping the exclusion.   ║
+# ║ (This bit us on pihole; same fix as pihole + music.)                        ║
+# ║                                                                            ║
+# ║ REQUIRES: `providers.kubernetesCRD.allowExternalNameServices: true` in the  ║
+# ║ traefik values (off by default for SSRF safety). Traefik then builds the    ║
+# ║ backend URL as http://<externalName>:<port>. A literal IP needs no DNS.     ║
+# ║                                                                            ║
+# ║ If barn's IP ever changes, update backendIP in values.yaml.                ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: bloom-external
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: bloom-proxy
+spec:
+  type: ExternalName
+  # A literal IP: Traefik targets it directly, no cluster-DNS lookup needed.
+  externalName: {{ .Values.bloomProxy.backendIP | quote }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.bloomProxy.backendPort }}
