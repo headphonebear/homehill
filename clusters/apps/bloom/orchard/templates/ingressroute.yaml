@@ -47,10 +47,13 @@ spec:
     - match: Host(`{{ .Values.bloomProxy.host }}`)
       kind: Rule
       middlewares:
-        # HSTS + hardening headers — same cross-namespace ref into `traefik` as
-        # every other homehill route. Includes frameDeny — fine, SwarmUI is a
-        # top-level app, never iframed.
-        - name: security-headers
+        # HSTS + hardening headers, cross-namespace ref into `traefik` — but the
+        # SAMEORIGIN variant, NOT the usual `security-headers`.
+        # WHY: SwarmUI iframes ComfyUI's own UI (tab "Comfy Workflow") from the
+        # same origin. `frameDeny` (X-Frame-Options: DENY) made the browser refuse
+        # that frame → the tab spun forever. Found by `ai` 2026-10-17. Lesson: a
+        # twin's "harmless" assumptions don't transfer unchecked.
+        - name: security-headers-sameorigin
           namespace: traefik
       services:
         - name: bloom-external

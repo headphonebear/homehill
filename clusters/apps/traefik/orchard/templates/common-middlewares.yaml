@@ -33,3 +33,36 @@ spec:
     customResponseHeaders:
       X-Robots-Tag: "noindex,nofollow"
       Server: ""
+
+---
+# Security Headers — SAMEORIGIN variant
+# Usage: traefik-security-headers-sameorigin@kubernetescrd
+#
+# Identical to `security-headers` above EXCEPT X-Frame-Options: SAMEORIGIN
+# instead of frameDeny (DENY).
+# WHY a separate variant: some apps iframe THEMSELVES — SwarmUI (bloom) embeds
+# ComfyUI's own UI in its "Comfy Workflow" tab from the same origin. DENY makes
+# the browser refuse that frame too → the tab spins forever. SAMEORIGIN still
+# blocks foreign sites from framing us (clickjacking), but allows self-embedding.
+# WHY not chain a second middleware that overrides the header: which one wins
+# depends on Traefik's response-header ordering — hard to reason about at 2am.
+# A full copy is boring and explicit.
+# ⚠️ KEEP IN SYNC with `security-headers` — if you change one, change both.
+# Used by: bloom
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers-sameorigin
+  namespace: traefik
+spec:
+  headers:
+    browserXssFilter: true
+    contentTypeNosniff: true
+    forceSTSHeader: true
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 31536000
+    customFrameOptionsValue: SAMEORIGIN
+    customResponseHeaders:
+      X-Robots-Tag: "noindex,nofollow"
+      Server: ""
