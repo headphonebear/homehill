@@ -22,6 +22,10 @@ Frau Bär gets her own home on owlhome — and her own Claude.
 - **`coder` 2003** on owlhome: key-only login, `NOPASSWD` sudo in its own `/etc/sudoers.d/coder` (removable on its own); `janitor` stays the human admin
 - **Claude desktop app + Claude Code** on owlhome from Anthropic's apt repo (`stable`), same repo + key as barn
 - `docs/uid-schema.md`: `bearin`, mirrored 2000/3000 ranges, inactive `playbear` 2008 + `film` 2011
+- **bloom** 🌸 (`https://bloom.homehill.de`): HTTPS front door for SwarmUI (Stable Diffusion) on barn — third twin of pihole + music. Orchard's Traefik terminates TLS with the `*.homehill.de` wildcard and proxies via an ExternalName Service to `bloom.service` on barn `:7801`, which `ai` owns and runs (autostart, login enforced in SwarmUI). New app `clusters/apps/bloom/` + `clusters/argocd/orchard/bloom.yaml`; Pi-hole A record → Traefik. Service files on barn not yet in the repo (`ai` brings them once write access is set up)
+
+### Fixed
+- **bloom's "Comfy Workflow" tab spun forever**: SwarmUI iframes ComfyUI from the same origin, but the shared `security-headers` middleware sends `X-Frame-Options: DENY`. New `security-headers-sameorigin` variant (identical, `SAMEORIGIN`) used only by bloom; pihole + music keep `DENY`. Found by `ai`
 
 ### Decided
 - **No `apt-mark hold`** for the Claude packages: a hold is silent standstill (`apt upgrade` skips it, nobody notices it aging). Hosts stay in sync via a shared update rhythm instead. Version pinning stays the rule for Orchard images
