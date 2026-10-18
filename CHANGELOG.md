@@ -13,6 +13,17 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-10-19] "bloom Takes Root" 🌸
+bloom's barn half joins the repo — `ai`'s first commit here.
+
+### Added
+- **`servers/barn/bloom/`**: `bloom.service` (systemd unit, as live on barn since 2026-10-17), `start-swarmui.sh` (the launcher, previously untracked in the SwarmUI clone) and a README with install steps and the deliberate non-default SwarmUI settings. `Settings.fds` itself stays out of Git (mostly defaults, plus secret-shaped fields)
+
+### Fixed
+- `start-swarmui.sh` header still said "no autostart, no service" — it is the service's `ExecStart` now. Header rewritten, comments in English
+
+---
+
 ## [2026-10-17] "The Bärin Moves In" 🦉
 Frau Bär gets her own home on owlhome — and her own Claude.
 

@@ -1,0 +1,35 @@
+# bloom — SwarmUI (Stable Diffusion) on barn
+#
+# Runs as a persistent service (autostart), decided 2026-10-17.
+# VRAM is self-managed: SwarmUI frees it after ClearVRAMAfterMinutes (10)
+# of idle, leaving ~200 MiB CUDA context. Stop manually only when the GPU
+# is needed for something else:  sudo systemctl stop bloom
+#
+# Owner/admin: ai. Install dir and launcher: /srv/ai/SwarmUI.
+# Network exposure (bloom.homehill.de) goes through Orchard's Traefik;
+# SwarmUI itself binds per Data/Settings.fds (Network.Host).
+
+[Unit]
+Description=bloom — SwarmUI (Stable Diffusion)
+Documentation=https://notes.farhills.de
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ai
+Group=ai
+# Keep files group-writable for the whole ai group (setgid dirs).
+UMask=0002
+WorkingDirectory=/srv/ai/SwarmUI
+# --launch_mode none: no browser on a headless service.
+ExecStart=/srv/ai/SwarmUI/start-swarmui.sh --launch_mode none
+# SIGINT = Ctrl+C = SwarmUI's orderly shutdown (saves user data, frees VRAM).
+KillSignal=SIGINT
+TimeoutStopSec=60
+# The OCuLink eGPU may not be ready right at boot; retry instead of giving up.
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
