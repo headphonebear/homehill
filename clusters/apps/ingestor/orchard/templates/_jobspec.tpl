@@ -68,7 +68,7 @@ spec:
               # when the buffer flushes — matters for a run that dies midway.
             - name: HOME
               value: /tmp
-              # WHY: UID 7007 has no home in the image; libraries that want
+              # WHY: the goblin UID has no home in the image; libraries that want
               # to write a dotfile get the tmpfs below instead of failing.
           resources:
             {{- toYaml $v.resources | nindent 12 }}

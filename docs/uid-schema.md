@@ -11,8 +11,8 @@ everywhere — on barn, on chick, on an NFS share, inside a pod.
 | `1000–1999` | **System / defaults** | Distro defaults and container-image users | `1000` (common image default) |
 | `2000–2999` | **Stefan's accounts** | One account per role — data is owned by the role it belongs to | `mk3`, `coder`, `tinkerbear` |
 | `3000–3999` | **Frau Bär's accounts** | Same idea, second person in the household | `tinkerbearin` |
-| `7000–7999` | **Service users ("service goblins")** | Long-running services; they *run* things, they don't *own* the data. `7xxx` mirrors the `2xxx` account it serves (`3xxx`: open, see below) | `ai-svc` 7007 |
-| `9000–9999` | **Linked AI accounts** | An AI identity tied to a personal account, if one is wanted. `9xxx` mirrors it the same way | `ai` → 9007 (reserved, not created) |
+| `7000–7999` | **Service users ("service goblins")** | Long-running services; they *run* things, they don't *own* the data. Numbered in order, next free number | `memos-svc`, `ai-svc` |
+| `9000–9999` | **Linked AI accounts** | An AI identity tied to a personal account, if one is wanted. `9xxx` mirrors the account (`ai` 2007 → 9007) | `ai` → 9007 (reserved, not created) |
 
 UID and GID are always the same number.
 
@@ -47,27 +47,19 @@ setup.
 
 ## Service users
 
-**The goblin rule (Stefan, written down 2026-10-19):** a service user takes the
-number of the account it serves, with a `7` in front instead of the `2`:
-`ai` 2007 → `ai-svc` 7007. The `9xxx` range mirrors the same way for linked AI
-accounts, if one is wanted (`ai` → 9007, reserved). The idea is older than this
-page; it never made it into writing, which is how the first three entries below
-came to break it.
-
-⚠️ **Open:** Frau Bär's `3xxx` accounts would land on the same `7xxx` numbers as
-Stefan's (`tinkerbear` 2009 and `tinkerbearin` 3009 → both 7009). How her goblins
-are numbered is still to be decided.
+**Goblins are numbered in order** (Stefan, 2026-10-19): a new service user simply
+takes the next free `7xxx` number. The name says whom it serves (`ai-svc`), the
+number says nothing. Mirroring the personal account (`2007` → `7007`) was the old
+idea, but it was never written down, the first three goblins never followed it,
+and Frau Bär's `3xxx` accounts would have collided with Stefan's. Who wants to
+number goblins anyway.
 
 | User | UID/GID | Service | Status |
 |---|---|---|---|
 | `memos-svc` | 7001 | 📝 memos (on Orchard; matches file ownership on the NFS media share) | active |
 | `mqtt-svc` | 7002 | 🏠 MQTT / Node-RED (home automation) | reserved |
 | `jellyfin-svc` | 7003 | 🪦 Jellyfin | retired — replaced by belfry; **don't reuse** the number |
-| `ai-svc` | 7007 | 🌻 Ingestor (Outline → Qdrant CronJob on Orchard, image `homehill/ingestor`). First user under the goblin rule | active |
-
-7001–7003 predate the written goblin rule and don't follow it (7001 would be
-`mk3`'s goblin). They stay as they are — renumbering would mean re-owning files
-on the NFS share for no gain — and their numbers are simply taken.
+| `ai-svc` | 7004 | 🌻 `ai`'s goblin. Runs the ingestor (Outline → Qdrant CronJob on Orchard, image `homehill/ingestor`) | active |
 
 Retired numbers stay retired: old files with that owner may still be around,
 and a new service must never inherit them by accident.

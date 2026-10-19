@@ -17,8 +17,8 @@ and this project uses date-based versioning (YYYY.MM.DD).
 The Outline → Qdrant ingestor moves to Orchard as the repo's first CronJob.
 
 ### Added
-- **`ingestor`** app (`clusters/apps/ingestor/orchard/` + `clusters/argocd/orchard/ingestor.yaml`, AppProject `sunflower`, namespace `ingestor`): incremental CronJob every 5 min, `concurrencyPolicy: Forbid`, deadline, history limits, read-only root FS, UID 7007, measured resource limits. Image `git.homehill.de/homehill/ingestor` (built from `project-sunflower`, Forgejo registry). A second, always-suspended `ingestor-full` CronJob is the template for a `--full` run by hand. Starts **suspended** until the secrets exist (cutover gate in `values.yaml`)
-- `docs/uid-schema.md`: the "service goblin" rule (`2xxx` → `7xxx`), the `9xxx` range for linked AI accounts, `ai-svc` 7007
+- **`ingestor`** app (`clusters/apps/ingestor/orchard/` + `clusters/argocd/orchard/ingestor.yaml`, AppProject `sunflower`, namespace `ingestor`): incremental CronJob every 5 min, `concurrencyPolicy: Forbid`, deadline, history limits, read-only root FS, UID 7004 (`ai-svc`), measured resource limits. Image `git.homehill.de/homehill/ingestor` (built from `project-sunflower`, Forgejo registry). A second, always-suspended `ingestor-full` CronJob is the template for a `--full` run by hand. Starts **suspended** until the secrets exist (cutover gate in `values.yaml`)
+- `docs/uid-schema.md`: service goblins are numbered in order (the never-written mirroring idea is retired — it would have collided for Frau Bär's `3xxx` accounts), the `9xxx` range for linked AI accounts, `ai-svc` 7004
 
 ### Decided
 - **No nightly `--full`**: it would bypass the incremental run's emergency brake and could empty the index silently if the key ever sees less. Every incremental run already catches deletions

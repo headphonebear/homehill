@@ -27,10 +27,12 @@ ingestor:
   schedule: "*/5 * * * *"
   timeZone: Europe/Berlin
 
-  # WHY the service goblin 7007: Homehill UID schema (docs/uid-schema.md) —
-  # 7xxx mirrors the role account it serves, here `ai` 2007. It runs things,
-  # it owns nothing (no volumes at all).
-  uid: 7007
+  # WHY 7004: `ai-svc`, the service goblin of `ai` (docs/uid-schema.md —
+  # goblins are numbered in order). It runs things, it owns nothing (no volumes
+  # at all). The pod securityContext wins over the image's USER line; images up
+  # to 2026.10.19-a494a4b still say 7007 there (the number before the scheme was
+  # settled) — harmless, fixed with the next build.
+  uid: 7004
 
   outline:
     url: https://notes.farhills.de
