@@ -1,0 +1,70 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Values — Ingestor (Outline → Qdrant, incremental)                          ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+ingestor:
+  # ── CUTOVER GATE ──────────────────────────────────────────────────────────
+  # The CronJob exists but does not fire until the secrets below are in place.
+  # WHY: without them every run fails, every 5 minutes, and ArgoCD would show a
+  # wall of failed Jobs. Flip to false once `coder` has sealed both secrets and
+  # the one-time `--full` (see templates/cronjob.yaml) has run.
+  suspend: true
+
+  image:
+    repository: git.homehill.de/homehill/ingestor
+    tag: "2026.10.19-a494a4b"
+    # WHY pinned, not :latest: tag = build date + project-sunflower commit, so
+    # every running image points at exact code. Built by hand on barn (`ai`).
+    # The registry shares Forgejo's 10 Gi volume with the repos — prune old tags.
+
+    # Forgejo has REQUIRE_SIGNIN_VIEW on, so anonymous pulls get 401. Name of a
+    # kubernetes.io/dockerconfigjson secret with a read-only package token, or
+    # "" if the package is made public. Decision: `coder`.
+    pullSecret: ingestor-registry
+
+  # Every 5 minutes. A run with nothing to do takes seconds and ~90 MiB and never
+  # loads the model. WHY not more often: Outline (Hetzner) throttles with 429
+  # after a burst of calls — the ingestor retries, but no need to provoke it.
+  schedule: "*/5 * * * *"
+  timeZone: Europe/Berlin
+
+  # WHY the service goblin 7007: Homehill UID schema (docs/uid-schema.md) —
+  # 7xxx mirrors the role account it serves, here `ai` 2007. It runs things,
+  # it owns nothing (no volumes at all).
+  uid: 7007
+
+  outline:
+    url: https://notes.farhills.de
+    # Secret with key `token`: API key of the Outline user `claude-ingestor`
+    # (member, reads everything). Created by Stefan + coder.
+    tokenSecret: ingestor-outline
+
+  qdrant:
+    # WHY in-cluster HTTP, not https://qdrant.homehill.de: no detour through
+    # Traefik. Plain HTTP inside the cluster is accepted (Stefan, 2026-10-19):
+    # whoever can sniff the pod network is already in, and the key below can
+    # only touch `outline-docs`. qdrant-client logs "Api key is used with an
+    # insecure connection" on every run — expected, not a fault.
+    url: http://qdrant.qdrant.svc:6333
+    collection: outline-docs
+    # Secret with key `api-key`: a Qdrant JWT with `rw` on `outline-docs` ONLY
+    # (JWT RBAC). Never the master key — the job can't create/drop collections
+    # and can't see `claude-memory`, by design. Minted by coder.
+    keySecret: ingestor-qdrant
+
+  # The Flurbuch "drawer": comma-separated Outline doc ids whose SUBTREES never
+  # reach the index (health data). Empty until Stefan + the Bärin have decided
+  # where the drawer hangs. A configured id that isn't found ABORTS the run —
+  # on purpose, a drawer nobody finds protects nothing.
+  skipSubtrees: ""
+
+  # Measured on barn 2026-10-19 (cgroup memory.peak, same image):
+  #   no-op run ~86 MiB · full re-embed of 469 chunks ~549 MiB, ~12 s.
+  # Request covers the usual no-op; the limit leaves headroom for a full run
+  # and a growing book. A burst of CPU only while embedding.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi

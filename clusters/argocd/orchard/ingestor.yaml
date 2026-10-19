@@ -1,0 +1,48 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌻 Ingestor Application — keeps Qdrant's `outline-docs` in step with Outline ║
+# ║ Project Sunflower's indexer as a CronJob: every few minutes it diffs the    ║
+# ║ Outline book against the index and embeds only what changed. Nobody         ║
+# ║ indexes by hand any more. Code + image: headphonebear/project-sunflower     ║
+# ║ (ingestor/). Owned by `ai`; cluster side (secrets, JWTs) by `coder`.        ║
+# ║                                                                            ║
+# ║ WHY its own app, not a template in the qdrant app: Qdrant is a database     ║
+# ║ (selfHeal:false, touched rarely); the ingestor is code that changes often.  ║
+# ║ Separate apps keep lifecycle and ownership apart; its secrets live in its   ║
+# ║ own namespace. (Decided by Stefan, Hive 2026-10-19.)                        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingestor
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: sunflower
+  # WHY: second app in the Sunflower AppProject, next to qdrant.
+
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/ingestor/orchard
+
+    helm:
+      releaseName: ingestor
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingestor
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      # WHY selfHeal:true — a CronJob with no volumes and no state of its own
+      # (the index IS the state). Nothing to Multi-Attach; safe to reconcile.
+
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,18 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌻 Ingestor — Umbrella Chart for Orchard                                    ║
+# ║ Outline → Qdrant indexer (Project Sunflower) as a CronJob. The first        ║
+# ║ CronJob in this repo — written to be copied: every non-obvious field has a  ║
+# ║ WHY in templates/cronjob.yaml.                                              ║
+# ║                                                                            ║
+# ║ WHY no dependencies: there is no upstream chart — our own image             ║
+# ║ (git.homehill.de/homehill/ingestor, built from project-sunflower) and one   ║
+# ║ local template.                                                             ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v2
+name: ingestor-orchard
+description: Outline → Qdrant indexer (Project Sunflower), incremental CronJob
+type: application
+version: 1.0.0
+appVersion: "2026.10.19-a494a4b"
+# WHY appVersion = image tag: informational, but it makes `helm list` say
+# which ingestor build is live. Keep it in sync with values.yaml image.tag.

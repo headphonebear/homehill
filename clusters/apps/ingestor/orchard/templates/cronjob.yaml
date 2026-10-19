@@ -1,0 +1,65 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ 🌻 Ingestor CronJobs                                                        ║
+# ║                                                                            ║
+# ║  ingestor        incremental, every 5 min. The only one that ever fires.   ║
+# ║  ingestor-full   `--full`, ALWAYS suspended — a template for runs by hand. ║
+# ║                                                                            ║
+# ║ WHY no nightly --full (coder, Hive 2026-10-19): the emergency brake only    ║
+# ║ guards incremental runs. --full deliberately sweeps everything it didn't    ║
+# ║ see — if the key suddenly sees less, a nightly --full would empty the index ║
+# ║ silently. Deletions are caught by every incremental run anyway, so the      ║
+# ║ "safety net" had nothing left to catch.                                     ║
+# ║                                                                            ║
+# ║ Run by hand (the poor man's Stubser 🥊 until there is a real one):          ║
+# ║   now, incremental:  kubectl -n ingestor create job --from=cronjob/ingestor ingestor-now-$(date +%s)
+# ║   full re-embed:     kubectl -n ingestor create job --from=cronjob/ingestor-full ingestor-full-$(date +%s)
+# ║   (--full: one-time migration of the pre-incremental index, model change, ║
+# ║    repair. Check the log for "Fremdpunkte weggeräumt" afterwards.)         ║
+# ║   logs:              kubectl -n ingestor logs job/<name>                    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+{{- $v := .Values.ingestor }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ingestor
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: ingestor
+spec:
+  schedule: {{ $v.schedule | quote }}
+  timeZone: {{ $v.timeZone | quote }}
+  suspend: {{ $v.suspend }}
+  # WHY a gate: see values.yaml (CUTOVER GATE).
+  concurrencyPolicy: Forbid
+  # WHY Forbid: two runs at once would both diff against the same index and
+  # race each other's upserts/deletes. A slow run simply skips the next tick.
+  startingDeadlineSeconds: 240
+  # WHY: if a tick is missed (controller restart, node busy), still start it
+  # within 4 min — but never pile up a backlog of stale ticks.
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  # WHY 3/5: enough to read the last few logs; failures are kept a bit longer
+  # because they're the ones you go looking for. 288 runs a day — without a
+  # limit the namespace would fill with finished Jobs.
+  jobTemplate:
+    {{- include "ingestor.jobTemplate" (dict "root" $ "args" (list)) | nindent 4 }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ingestor-full
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: ingestor
+spec:
+  schedule: "0 4 * * *"
+  timeZone: {{ $v.timeZone | quote }}
+  suspend: true
+  # WHY hard-coded true, NOT tied to the gate: this CronJob must never fire on
+  # its own (see header). It exists only so `create job --from=` has a ready
+  # spec with `--full`. The schedule is a required field, nothing more.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    {{- include "ingestor.jobTemplate" (dict "root" $ "args" (list "--full")) | nindent 4 }}
