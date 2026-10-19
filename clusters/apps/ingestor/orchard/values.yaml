@@ -25,7 +25,7 @@ ingestor:
   # loads the model. WHY not more often: Outline (Hetzner) throttles with 429
   # after a burst of calls — the ingestor retries, but no need to provoke it.
   schedule: "*/5 * * * *"
-  timeZone: Europe/Berlin
+  # No timeZone on purpose — see templates/cronjob.yaml.
 
   # WHY 7004: `ai-svc`, the service goblin of `ai` (docs/uid-schema.md —
   # goblins are numbered in order). It runs things, it owns nothing (no volumes
