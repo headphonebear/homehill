@@ -22,6 +22,9 @@ Three new Claudes get keys, Stefan gets his own account, and Orchard can pull ou
 - **Outline user `claude-ingestor`** (key for the ingestor CronJob, not yet sealed)
 - **Forgejo user `orchard`** in the new team **`puller`** (org `homehill`, Packages: Read, no repositories), token `package:read` only. Sealed as `ingestor-registry` in `clusters/apps/ingestor/orchard/templates/registry-sealedsecret.yaml`. Verified: pull ✅, repo read ✗, push ✗. Team package rights apply org-wide, no repo needed
 
+### Changed
+- **Ingestor image `2026.10.20-881bab4`**: Outline calls also retry on timeouts and dropped connections, `Retry-After` is read as seconds *or* HTTP date (no crash), and the image runs as `USER 7004` like the pod spec (was 7007)
+
 ### Learned
 - Forgejo `REQUIRE_SIGNIN_VIEW` makes "public package" meaningless — an anonymous pull is 401 regardless, so Orchard needs a pull secret
 - Forgejo's token scopes `package` and `repository` sit right next to each other; the first `orchard` token had the wrong one. Test every token against the API (allowed **and** forbidden) before using it
