@@ -22,6 +22,8 @@ Three new Claudes get keys, Stefan gets his own account, and Orchard can pull ou
 - **Outline user `claude-ingestor`** (key for the ingestor CronJob, not yet sealed)
 - **Forgejo user `orchard`** in the new team **`puller`** (org `homehill`, Packages: Read, no repositories), token `package:read` only. Sealed as `ingestor-registry` in `clusters/apps/ingestor/orchard/templates/registry-sealedsecret.yaml`. Verified: pull ✅, repo read ✗, push ✗. Team package rights apply org-wide, no repo needed
 
+- **Ollama + Open WebUI on barn's RTX 3060** (`servers/barn/ollama/`): the dead ROCm/780M stack recycled for CUDA. Images pinned (`ollama/ollama:0.40.6`, `open-webui:v0.12.3`), GPU via nvidia device reservation, one model at a time with 5 min keep-alive (shares the card with bloom), 16K default context, cloud models off. Ollama `:11434` and Open WebUI `:3080` on the LAN; Open WebUI sign-ups land as `pending`. Started by hand, not a Portainer stack yet. First real model `gemma4:12b`: ~50 tok/s, 9.4 GB VRAM, recognised Kiel from a photo
+
 ### Changed
 - **Ingestor image `2026.10.20-881bab4`**: Outline calls also retry on timeouts and dropped connections, `Retry-After` is read as seconds *or* HTTP date (no crash), and the image runs as `USER 7004` like the pod spec (was 7007)
 
