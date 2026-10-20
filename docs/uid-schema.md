@@ -31,11 +31,12 @@ UID and GID are always the same number.
 | `tinkerbear` | 2009 | 🛠️ Tinkering, 3D printing, indoor gardening 🌿 |
 | `stefan` | 2010 | 📷 "The Stefan" — family photos, personal documents |
 | `film` | 2011 | 💤 Inactive — exists on barn (since 2026-01), role not written down yet |
+| `bear` | 2012 | 🐻 Stefan himself — the overview: home of `claude-bear`, who knows a bit of everything and nothing in detail (barn) |
 | `tinkerbearin` | 3009 | 🎨 Frau Bär — 3D printing and painting |
 | `bearin` | 3012 | 🐻 Frau Bär — "everything for now", home of her own Claude (owlhome) |
 
 The two personal ranges mirror each other: `tinkerbear` 2009 ↔ `tinkerbearin`
-3009, `bearin` 3012 ↔ `bear` 2012 (decided, not created yet).
+3009, `bearin` 3012 ↔ `bear` 2012 (created on barn 2026-10-20).
 
 `coder` (2003) is the account used on barn, chick and owlhome, and the one
 AI-assisted sessions run as.
@@ -44,6 +45,13 @@ Accounts live only where they're used: `bearin` exists on owlhome only (not on
 barn — decided 2026-10-17, add it when she needs something there).
 `tinkerbearin` also exists on barn, for a historical reason unrelated to today's
 setup.
+
+`bear` has **no extra groups** — not `mk3`, not `headphonebear`, no `sudo` or
+`docker` (decided 2026-10-20). WHY: the overview doesn't come from the file
+system. The threads come together in the Hive, Outline and Qdrant, and that's
+where `claude-bear` gets its access. A group would only add write rights to
+another role's data. Home is `750`. Add a group later, with a WHY, when a
+concrete need shows up.
 
 ## Service users
 

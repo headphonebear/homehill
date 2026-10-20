@@ -13,6 +13,21 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-10-20] "The Hive Fills Up" 🐝
+Three new Claudes get keys, Stefan gets his own account, and Orchard can pull our images.
+
+### Added
+- **`bear` (2012) on barn**: Stefan's own account, home of `claude-bear`, the overview Claude ("knows everything, nothing in detail"). Only its own group, home `750`, no `sudo`/`docker` — the overview comes from Hive, Outline and Qdrant, not the file system (`docs/uid-schema.md`)
+- **Three new Claude identities**, each with its own Outline user (`member`, Outline MCP) and Forgejo user (team `beekeeper`, token `repository` RW only): `claude-bear` (barn, Hive sender `claude-bear`), `claude-mk3` (barn, account `mk3`, Hive sender `mk3`), `claude-tinkerbearin` (owlhome, Hive sender `tinkerbearin`). All tested live: `auth.info`, `push: True`, no package access, `ls-remote`, push dry-run, MCP connected
+- **Outline user `claude-ingestor`** (key for the ingestor CronJob, not yet sealed)
+- **Forgejo user `orchard`** in the new team **`puller`** (org `homehill`, Packages: Read, no repositories), token `package:read` only. Sealed as `ingestor-registry` in `clusters/apps/ingestor/orchard/templates/registry-sealedsecret.yaml`. Verified: pull ✅, repo read ✗, push ✗. Team package rights apply org-wide, no repo needed
+
+### Learned
+- Forgejo `REQUIRE_SIGNIN_VIEW` makes "public package" meaningless — an anonymous pull is 401 regardless, so Orchard needs a pull secret
+- Forgejo's token scopes `package` and `repository` sit right next to each other; the first `orchard` token had the wrong one. Test every token against the API (allowed **and** forbidden) before using it
+
+---
+
 ## [2026-10-19] "Nobody Indexes by Hand" 🌻
 The Outline → Qdrant ingestor moves to Orchard as the repo's first CronJob.
 
