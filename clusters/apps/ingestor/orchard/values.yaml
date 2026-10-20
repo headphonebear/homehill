@@ -13,7 +13,7 @@ ingestor:
 
   image:
     repository: git.homehill.de/homehill/ingestor
-    tag: "2026.10.19-a494a4b"
+    tag: "2026.10.20-881bab4"
     # WHY pinned, not :latest: tag = build date + project-sunflower commit, so
     # every running image points at exact code. Built by hand on barn (`ai`).
     # The registry shares Forgejo's 10 Gi volume with the repos — prune old tags.
@@ -31,9 +31,8 @@ ingestor:
 
   # WHY 7004: `ai-svc`, the service goblin of `ai` (docs/uid-schema.md —
   # goblins are numbered in order). It runs things, it owns nothing (no volumes
-  # at all). The pod securityContext wins over the image's USER line; images up
-  # to 2026.10.19-a494a4b still say 7007 there (the number before the scheme was
-  # settled) — harmless, fixed with the next build.
+  # at all). Image and pod securityContext agree since 2026.10.20-881bab4
+  # (USER 7004); before that the image said 7007 and the pod spec won.
   uid: 7004
 
   outline:
