@@ -1,44 +1,58 @@
-version: "3.8"
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║ Ollama + Open WebUI on barn's RTX 3060 (CUDA)                        ║
+# ║ Recycled from the old Radeon 780M / ROCm stack (2026-10-20).         ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+# Storage on /srv with absolute paths, same convention as qdrant.
+# WHY: Portainer runs stacks from changing working dirs — relative ./ paths break.
 
 services:
   ollama:
-    image: ollama/ollama:rocm
+    # WHY: pinned, not :latest — Ollama ships several releases a week; we want to
+    # pick the version (and roll back) ourselves. CUDA image, not :rocm (RTX 3060).
+    image: ollama/ollama:0.40.6
     container_name: ollama-barn
     restart: unless-stopped
-
-    # GPU & System Access
-    devices:
-      - /dev/kfd
-      - /dev/dri
-    group_add:
-      - "39"   # video group
-      - "105"  # render group
-
-    # ROCm für Radeon 780M
-    environment:
-      - HSA_OVERRIDE_GFX_VERSION=10.3.0
-
-    # Ports
     ports:
+      # LAN on purpose (later: embeddings for the ingestor on Orchard).
+      # Ollama has NO auth — anyone in Homehill can use and pull models.
       - "11434:11434"
-
-    # Volumes – WICHTIG: Ganzes ~/.ollama mounten!
+    environment:
+      - TZ=Europe/Berlin
+      # WHY: the 3060's 12 GB are shared with bloom (SDXL ~6.8 GB). One model at a
+      # time, unloaded after 5 min idle, so bloom gets the card back.
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=5m
+      # WHY: the 4096 default is too small for a vision model in a chat — one
+      # photo plus history plus Open WebUI's tool definitions was 6237 tokens.
+      - OLLAMA_CONTEXT_LENGTH=16384
+      # WHY: local playground — no pass-through to ollama.com cloud models,
+      # nothing leaves the house unnoticed.
+      - OLLAMA_NO_CLOUD=true
     volumes:
-      - /srv/docker/ollama/data:/root/.ollama  # GANZES Verzeichnis auf /srv!
+      # Models live on /srv (914 GB), never on barn's small root partition.
+      - /srv/docker/ollama/data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:v0.12.3
     container_name: open-webui-barn
     restart: unless-stopped
-
     ports:
-      - "3000:8080"
-
+      # WHY: 3080, not 3000 — grafana already holds 3000 on barn.
+      - "3080:8080"
     environment:
-      - OLLAMA_BASE_URL=http://ollama-barn:11434
-
+      - TZ=Europe/Berlin
+      - OLLAMA_BASE_URL=http://ollama:11434
+      # First account to sign up becomes admin; everyone after that lands as
+      # "pending" until the admin approves them.
+      - DEFAULT_USER_ROLE=pending
     volumes:
       - /srv/docker/open-webui/data:/app/backend/data
-
     depends_on:
       - ollama

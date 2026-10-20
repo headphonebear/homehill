@@ -1,85 +1,79 @@
-# Ollama + Open WebUI on Radeon 780M
+# Ollama + Open WebUI on barn 🦙
 
-Local LLM inference using Ollama with ROCm AMD support.
+Local LLMs on barn's **RTX 3060 (12 GB)**: Ollama as the inference server,
+Open WebUI as the chat front end. Recycled on 2026-10-20 from the old
+Radeon 780M / ROCm stack (which had not been running for months).
+Owner/admin of the stack: `ai`.
 
-## Services
+| Service    | URL                     | Notes                                   |
+|------------|-------------------------|-----------------------------------------|
+| Ollama API | `http://barn:11434`     | LAN, **no auth** — anyone in Homehill   |
+| Open WebUI | `http://barn:3080`      | Own accounts; new sign-ups are `pending` until the admin approves |
 
-- **Ollama** (http://localhost:11434) – LLM API server
-- **Open WebUI** (http://localhost:3000) – Beautiful chat interface
+No Homehill name and no Traefik/HTTPS yet — it stays a LAN tool until it
+proves itself. Then it gets a name (like bloom) and a front door on Orchard.
 
-## Hardware
+## What lives where
 
-- **GPU**: AMD Radeon 780M (gfx1003)
-- **RAM**: 16 GB
-- **Model Storage**: `/srv/docker/ollama/models`
+| Piece | Where | In Git |
+|-------|-------|--------|
+| Compose stack | this dir | ✅ |
+| Models (`ollama pull`) | `/srv/docker/ollama/data` | no — data |
+| Open WebUI users, chats, settings | `/srv/docker/open-webui/data` | **never** |
+| Old ROCm-era Open WebUI data | `/srv/docker/open-webui.old-rocm` | no — kept until confirmed unneeded, then delete |
 
-## Quick Start
+## Run / update
+
+Started by hand for now (not yet a Portainer stack):
 
 ```bash
-cd ~/projects/homehill/servers/barn/docker/ollama
+cd servers/barn/ollama
 docker compose up -d
 ```
 
-## Loading Models
+To update, bump the pinned tags in `docker-compose.yaml`, then `docker compose up -d`.
+Both images are pinned on purpose — Ollama ships several releases a week.
 
-Pull a model from Ollama Registry:
+## Settings that matter (and why)
 
-```bash
-docker exec ollama-barn ollama pull llama3.2:3b
-docker exec ollama-barn ollama pull phi3:mini
-docker exec ollama-barn ollama pull mistral:7b
-```
+- **`OLLAMA_MAX_LOADED_MODELS=1`, `OLLAMA_KEEP_ALIVE=5m`** — the GPU is shared with
+  bloom (SDXL ≈ 6.8 GB). One model at a time, unloaded after 5 min idle.
+- **`OLLAMA_CONTEXT_LENGTH=16384`** — the 4096 default overflowed on the first photo
+  in a chat (6237 tokens: image + history + Open WebUI's tool definitions).
+- **`OLLAMA_NO_CLOUD=true`** — no pass-through to ollama.com cloud models; nothing
+  leaves the house.
+- **Port 3080** for Open WebUI — grafana already holds 3000 on barn.
 
-## List Available Models
+## Models
 
 ```bash
 docker exec ollama-barn ollama list
+docker exec ollama-barn ollama ps     # PROCESSOR must say "100% GPU"
+docker exec ollama-barn ollama pull <model>:<tag>
 ```
 
-## Test Model Directly
+| Model | Size | Notes (measured 2026-10-20) |
+|-------|------|-----------------------------|
+| `gemma4:12b` | 8 GB (Q4_K_M) | Default. Text + vision + tools + thinking. ~50 tok/s warm, 9.4 GB VRAM at 16K context, 100% GPU |
+| `gemma2:2b` | 1.6 GB | Leftover from ROCm days, ~137 tok/s. **No tool support** → Open WebUI errors "does not support tools" |
+
+Rule of thumb for 12 GB: 8–14B models in Q4. Model + context must fit, or Ollama
+offloads layers to the CPU and speed drops ~10×.
+
+## Known quirks
+
+- **VRAM vs. bloom:** `gemma4:12b` (9.4 GB) and an SDXL render (6.8 GB) don't fit at
+  the same time. Sequentially fine, concurrently one of them suffers. Unsolved.
+- **Chat titles "your concise title here":** Open WebUI generates titles with the
+  chat model; gemma4 with thinking returns the template placeholder. Fix later via
+  Admin → Settings → Interface (task model / title prompt).
+- **Ollama has no auth.** Fine on the LAN; must not be exposed beyond it as-is.
+
+## API
 
 ```bash
-docker exec -it ollama-barn ollama run llama3.2:3b
-# Type your question, Ctrl+D to exit
+curl http://barn:11434/api/version
+curl http://barn:11434/api/chat -d '{"model":"gemma4:12b","messages":[{"role":"user","content":"Hallo!"}],"stream":false}'
 ```
 
-## Recommended Models for 780M
-
-| Model | Size | Notes |
-|-------|------|-------|
-| `llama3.2:3b` | 2 GB | Fast, good quality |
-| `phi3:mini` | 2.3 GB | Very efficient |
-| `qwen2.5:3b` | 2 GB | Great for German & English |
-| `gemma2:2b` | 1.6 GB | Smallest, fastest |
-| `mistral:7b` | 4 GB | Bigger but still viable |
-
-## Storage
-
-Models are stored in `./models/` which persists on `/srv/docker/ollama/models`.
-
-Check usage:
-
-```bash
-du -sh ./models
-```
-
-## API Usage
-
-```bash
-# List running models
-curl http://localhost:11434/api/tags
-
-# Generate response
-curl -X POST http://localhost:11434/api/generate \
-  -d '{"model":"llama3.2:3b","prompt":"What is 2+2?"}'
-```
-
-## Performance
-
-- **Inference Speed**: ~2-5 sec per token (depends on model & VRAM)
-- **First Load**: ~10-30 sec (model context loading)
-
-## Future
-
-- Faster inference with RTX 3060 eGPU
-- Integration with MCP + Qdrant for intelligent agents
+OpenAI-compatible API under `http://barn:11434/v1/`; embeddings via `/api/embed`.
