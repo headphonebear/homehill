@@ -7,7 +7,9 @@ ingestor:
   # WHY: without them every run fails, every 5 minutes, and ArgoCD would show a
   # wall of failed Jobs. Flip to false once `coder` has sealed both secrets and
   # the one-time `--full` (see templates/cronjob.yaml) has run.
-  suspend: true
+  # ✅ Opened 2026-10-20: all three secrets sealed, first --full ran
+  #    (469 points written, 465 pre-incremental points swept).
+  suspend: false
 
   image:
     repository: git.homehill.de/homehill/ingestor
