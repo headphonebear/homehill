@@ -58,6 +58,13 @@ qdrant:
         secretKeyRef:
           name: qdrant-api-key
           key: api-key
+    # WHY jwt_rbac (2026-10-20): lets us hand out keys that only reach ONE
+    # collection — the ingestor gets `rw` on outline-docs, readers get `r`.
+    # The JWTs are signed (HS256) with the API key above; that key itself
+    # stays the master key with full access. Nothing changes for clients
+    # that already use it (claude-memory, the MCPs).
+    - name: QDRANT__SERVICE__JWT_RBAC
+      value: "true"
 
   service:
     type: ClusterIP
