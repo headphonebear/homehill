@@ -1,8 +1,7 @@
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ Memos Application                                                         ║
 # ║ Self-hosted notes, migrated off the legacy Swarm. Bundles the CNPG          ║
-# ║ database, its S3-backup SealedSecret, the Longhorn data PVC (+ the legacy   ║
-# ║ forest NFS PV/PVC until the 2026-10-24 migration is verified), and (gated on ║
+# ║ database, its S3-backup SealedSecret, the Longhorn data PVC, and (gated on   ║
 # ║ app.enabled) the memos Deployment/Service/IngressRoute.                     ║
 # ║                                                                            ║
 # ║ DEPLOY ORDER: needs the cnpg operator (wave -2) for its CRDs. This app is   ║
