@@ -21,6 +21,8 @@ chick, the dev server, gets its first service visit since bring-up — and final
 - **chick updated**: Alpine 3.23.5 → 3.23.7 (22 packages incl. OpenSSL 3.5.9), kernel 6.18.39 → 6.18.58, rebooted after 43 days. Images re-pulled: Postgres 16.14 → 16.15, Valkey 8.1.9 → 8.1.10. mk3 catalog recounted after the swap (1755 albums / 22671 tracks), `pg_dumpall` taken before it
 - **`servers/chick/README.md`** brought up to date: Valkey (not Dragonfly) is live, the stacks exist, the 1 TB music working copy at `/mnt/music`, the new access model; "rootless containers" for the `docker` group corrected to *root-equivalent*
 
+- **memos `MEMOS_DATA` moves off forest onto Longhorn** (`memos-data`, 2Gi RWO): forest (the old WD MyCloud NAS) reached end of life. A one-time `migrate-from-forest` initContainer copies the old dir read-only and leaves a marker; the forest NFS PV/PVC stays until the move is verified (`app.migrateFromForest`). Correction on the way: that dir only ever held the thumbnail cache — memos keeps attachments in Postgres, which CNPG already backs up to S3. On Longhorn `fsGroup` finally applies, which should also end the "permission denied" on `.thumbnail_cache` seen since 2026-10-14
+
 ### Added
 - Outline page **"🐣 chick — Hardware- & Host-Profil"** (collection `Homehill`), verified on the box
 

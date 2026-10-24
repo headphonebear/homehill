@@ -45,6 +45,16 @@ app:
   # points here. Flat subdomain — no multi-level (Hetzner DNS-01 quirk).
   uid: 7001
   # WHY: memos-svc from the Homehill UID schema (7000–7999 Service Goblins).
-  # Must match the NFS file ownership on the WD MyCloud (permission mapping).
+  # Also used as fsGroup, so the Longhorn data volume belongs to memos.
+  dataSize: 2Gi
+  # WHY: MEMOS_DATA on Longhorn (memos-data PVC) only holds the thumbnail
+  # cache — attachments live in Postgres (storage_type: DATABASE). The old NFS
+  # dir was 468 KB. 2Gi is plenty and trivial to expand.
+  migrateFromForest: true
+  # WHY: one-time copy of the old MEMOS_DATA from forest (NFS) into memos-data
+  # via an initContainer (see deployment.yaml). Flip to false — and then delete
+  # nfs-storage.yaml + the PV — once the move is verified. forest reached end
+  # of life on 2026-10-24.
   mediaSize: 20Gi
-  # WHY: capacity is a formality for NFS (the NAS export governs real size).
+  # WHY: LEGACY — size of the old forest NFS PV/PVC (a formality for NFS).
+  # Goes away with nfs-storage.yaml.

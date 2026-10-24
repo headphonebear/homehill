@@ -30,9 +30,44 @@ spec:
         runAsUser: {{ .Values.app.uid }}
         runAsGroup: {{ .Values.app.uid }}
         fsGroup: {{ .Values.app.uid }}
-        # WHY: UID 7001 (memos-svc) matches the NFS file ownership on the WD
-        # MyCloud — the swarm ran memos as 7001:7001 too. Keep it identical or
-        # the mounted media becomes unreadable/unwritable.
+        # WHY: UID 7001 (memos-svc) from the Homehill UID schema. On Longhorn,
+        # fsGroup makes kubelet hand the volume to 7001 — on the old NFS mount
+        # it was silently ignored (NFS keeps the NAS's ownership), which is why
+        # .thumbnail_cache writes failed with "permission denied" there.
+      {{- if .Values.app.migrateFromForest }}
+      initContainers:
+        # ╔══════════════════════════════════════════════════════════════════╗
+        # ║ ONE-TIME MIGRATION: forest (NFS) → memos-data (Longhorn)          ║
+        # ║ Copies the old MEMOS_DATA once, then drops a marker so later pod   ║
+        # ║ starts skip it. Remove together with nfs-storage.yaml once the     ║
+        # ║ move is verified (set app.migrateFromForest: false first).         ║
+        # ╚══════════════════════════════════════════════════════════════════╝
+        - name: migrate-from-forest
+          image: busybox:1.37.0
+          # WHY busybox: only needs sh + cp. Pinned like every image here.
+          command:
+            - sh
+            - -c
+            - |
+              if [ -f /data/.migrated-from-forest ]; then
+                echo "already migrated, skipping"; exit 0
+              fi
+              echo "copying forest:/nfs/memos/memos-svc -> memos-data"
+              ls -la /legacy
+              # WHY `cp -R` (not -a): we run as 7001 and can't chown, and we
+              # WANT the copies owned by 7001 anyway. `|| true` because the
+              # payload is just a regenerable thumbnail cache — an unreadable
+              # file on the NAS must not block memos from starting.
+              cp -R /legacy/. /data/ || echo "WARN: some files not copied (cache only, ok)"
+              date -u +%FT%TZ > /data/.migrated-from-forest
+              ls -la /data
+          volumeMounts:
+            - name: legacy-forest
+              mountPath: /legacy
+              readOnly: true
+            - name: data
+              mountPath: /data
+      {{- end }}
       containers:
         - name: memos
           image: {{ .Values.app.image }}
@@ -56,7 +91,7 @@ spec:
                   # If in-cluster TLS negotiation ever gets fussy, switch to
                   # composing the DSN from parts with sslmode=disable.
           volumeMounts:
-            - name: media
+            - name: data
               mountPath: /var/opt/memos
           readinessProbe:
             httpGet:
@@ -71,7 +106,15 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
       volumes:
-        - name: media
+        - name: data
+          persistentVolumeClaim:
+            claimName: memos-data
+        {{- if .Values.app.migrateFromForest }}
+        - name: legacy-forest
           persistentVolumeClaim:
             claimName: memos-media
+            readOnly: true
+            # WHY readOnly: the migration only reads from forest. Nothing on
+            # Orchard writes to the NAS anymore once this lands.
+        {{- end }}
 {{- end }}
