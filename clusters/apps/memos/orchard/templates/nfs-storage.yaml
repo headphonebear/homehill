@@ -1,4 +1,13 @@
 # ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ ⚠️ LEGACY (2026-10-24): forest reached end of life. MEMOS_DATA now lives on ║
+# ║ Longhorn (data-pvc.yaml); this PV/PVC is only mounted READ-ONLY by the      ║
+# ║ one-time migrate-from-forest initContainer. Remove this file once the move  ║
+# ║ is verified and app.migrateFromForest is false. The PV has Retain +         ║
+# ║ Prune=false, so delete it by hand (`kubectl delete pv memos-media-nfs`).    ║
+# ║ Correction: the bytes here were never the uploaded media — memos stores     ║
+# ║ attachments in Postgres. This dir held the thumbnail cache.                 ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+# ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ Memos media storage — reuse the EXISTING NFS export from the swarm         ║
 # ║ Same bytes the swarm used: forest.homehill.de:/nfs/memos/memos-svc         ║
 # ║ (WD MyCloud, NFSv3). No data copy — we just re-mount it from Orchard.       ║

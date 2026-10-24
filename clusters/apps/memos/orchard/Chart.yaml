@@ -5,7 +5,9 @@
 # ║               templates/ as plain manifests:                               ║
 # ║                 - database.yaml  → CNPG Cluster + ScheduledBackup (PG)      ║
 # ║                 - s3-backup-sealedsecret.yaml → S3 creds for CNPG backups   ║
-# ║                 - (step 3) Deployment/Service/IngressRoute/NFS PV for app   ║
+# ║                 - (step 3) Deployment/Service/IngressRoute for the app      ║
+# ║                 - data-pvc.yaml  → Longhorn PVC for MEMOS_DATA              ║
+# ║                 - nfs-storage.yaml → LEGACY forest NFS (read-only, to go)   ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 apiVersion: v2

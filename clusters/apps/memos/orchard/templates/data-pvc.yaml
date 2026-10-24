@@ -1,0 +1,23 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Memos data dir (MEMOS_DATA) — Longhorn                                     ║
+# ║ Replaces the NFS mount on forest (WD MyCloud, end of life 2026-10-24).      ║
+# ║                                                                            ║
+# ║ WHAT LIVES HERE: only memos' working dir — mainly .thumbnail_cache. The     ║
+# ║ attachments themselves are stored IN POSTGRES (storage_type: DATABASE) and  ║
+# ║ ride along in the CNPG S3 backups. Losing this volume costs thumbnails,     ║
+# ║ which memos regenerates — no data loss.                                     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: memos-data
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+    # WHY: single-replica app with `strategy: Recreate` — only ever one pod
+    # mounts this, so RWO is enough (no Multi-Attach risk on rollouts).
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: {{ .Values.app.dataSize }}
