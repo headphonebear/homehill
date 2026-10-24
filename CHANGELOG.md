@@ -23,6 +23,8 @@ chick, the dev server, gets its first service visit since bring-up — and final
 
 - **memos `MEMOS_DATA` moves off forest onto Longhorn** (`memos-data`, 2Gi RWO): forest (the old WD MyCloud NAS) reached end of life. A one-time `migrate-from-forest` initContainer copies the old dir read-only and leaves a marker; the forest NFS PV/PVC stays until the move is verified (`app.migrateFromForest`). Correction on the way: that dir only ever held the thumbnail cache — memos keeps attachments in Postgres, which CNPG already backs up to S3. On Longhorn `fsGroup` finally applies, which should also end the "permission denied" on `.thumbnail_cache` seen since 2026-10-14
 
+- **memos: forest NFS removed** — migration verified (thumbnails load, 0 warnings), so the one-time `migrate-from-forest` initContainer, the `app.migrateFromForest` switch and `nfs-storage.yaml` are gone. Nothing on Orchard mounts forest anymore. PV `memos-media-nfs` / PVC `memos-media` were `Retain` + `Prune=false` and get deleted by hand after the rollout; the bytes on the NAS stay untouched
+
 ### Added
 - Outline page **"🐣 chick — Hardware- & Host-Profil"** (collection `Homehill`), verified on the box
 

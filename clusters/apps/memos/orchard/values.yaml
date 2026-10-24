@@ -50,11 +50,3 @@ app:
   # WHY: MEMOS_DATA on Longhorn (memos-data PVC) only holds the thumbnail
   # cache — attachments live in Postgres (storage_type: DATABASE). The old NFS
   # dir was 468 KB. 2Gi is plenty and trivial to expand.
-  migrateFromForest: true
-  # WHY: one-time copy of the old MEMOS_DATA from forest (NFS) into memos-data
-  # via an initContainer (see deployment.yaml). Flip to false — and then delete
-  # nfs-storage.yaml + the PV — once the move is verified. forest reached end
-  # of life on 2026-10-24.
-  mediaSize: 20Gi
-  # WHY: LEGACY — size of the old forest NFS PV/PVC (a formality for NFS).
-  # Goes away with nfs-storage.yaml.
