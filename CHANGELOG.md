@@ -13,6 +13,19 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-10-24] "The Chick Gets Tidied" 🐣
+chick, the dev server, gets its first service visit since bring-up — and finally its own page in the book.
+
+### Changed
+- **chick SSH is key-only**: no root login, no password / keyboard-interactive auth, via a drop-in `/etc/ssh/sshd_config.d/10-homehill.conf` (survives openssh upgrades). Root has a real password now; `coder` gets `doas` (`/etc/doas.d/coder.conf`) — chick has no `sudo`
+- **chick updated**: Alpine 3.23.5 → 3.23.7 (22 packages incl. OpenSSL 3.5.9), kernel 6.18.39 → 6.18.58, rebooted after 43 days. Images re-pulled: Postgres 16.14 → 16.15, Valkey 8.1.9 → 8.1.10. mk3 catalog recounted after the swap (1755 albums / 22671 tracks), `pg_dumpall` taken before it
+- **`servers/chick/README.md`** brought up to date: Valkey (not Dragonfly) is live, the stacks exist, the 1 TB music working copy at `/mnt/music`, the new access model; "rootless containers" for the `docker` group corrected to *root-equivalent*
+
+### Added
+- Outline page **"🐣 chick — Hardware- & Host-Profil"** (collection `Homehill`), verified on the box
+
+---
+
 ## [2026-10-20] "The Hive Fills Up" 🐝
 Three new Claudes get keys, Stefan gets his own account, and Orchard can pull our images.
 
