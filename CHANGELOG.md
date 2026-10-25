@@ -13,6 +13,18 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-10-25] "Wiebke from Kiel" 🎙️
+barn learns to speak: local text-to-speech on the RTX 3060, for playing and testing.
+
+### Added
+- **`servers/barn/tts/`**: Qwen3-TTS (Apache-2.0) with its Gradio demo UI as two on-demand systemd units, `qwen-tts-design` (:7860, invent a voice from a description) and `qwen-tts-clone` (:7861, speak with a fixed reference voice). No `[Install]` section on purpose: the demo holds ~4.5 GB VRAM while running and never frees it when idle, so it's started when someone plays and stopped afterwards. Venv + models live in `/srv/ai/tts` (not in Git), README has the rebuild steps
+- First fixed voice "Wiebke" (Kiel morning radio), designed with VoiceDesign and pinned via clone
+
+### Changed
+- **`/srv/ai` is now `ai:ai 2755`** (was `root:root 755`): `ai` owns the AI area on barn; group `ai` keeps read/traverse. `SwarmUI/` and `stable-diffusion/` unchanged
+
+---
+
 ## [2026-10-24] "The Chick Gets Tidied" 🐣
 chick, the dev server, gets its first service visit since bring-up — and finally its own page in the book.
 

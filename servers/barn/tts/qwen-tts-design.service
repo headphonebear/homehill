@@ -1,0 +1,32 @@
+# qwen-tts-design — Qwen3-TTS web UI on barn, :7860
+# invent voices from a text description (VoiceDesign)
+#
+# On demand only, decided 2026-10-25: NOT enabled at boot. The Gradio demo
+# holds its ~4.5 GB of VRAM for as long as it runs (unlike bloom, it never
+# frees it when idle), so start it when someone wants to play and stop it
+# when the GPU is needed elsewhere:
+#   sudo systemctl start qwen-tts-design
+#   sudo systemctl stop  qwen-tts-design
+#
+# Owner/admin: ai. Install dir: /srv/ai/tts (venv, hf-cache, launcher).
+# LAN only, no login: http://192.168.1.165:7860 (Homehill has no external IP).
+
+[Unit]
+Description=Qwen3-TTS web UI (design)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ai
+Group=ai
+# Keep files group-writable for the whole ai group (setgid dirs).
+UMask=0002
+WorkingDirectory=/srv/ai/tts
+ExecStart=/srv/ai/tts/qwen-tts-ui design
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=15
+
+# WHY no [Install] section: there is nothing to enable. Starting at boot
+# would park VRAM next to bloom and Ollama without anyone using it.
