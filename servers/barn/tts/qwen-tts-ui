@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Launcher for the Qwen3-TTS Gradio demo on barn.
+# Usage: qwen-tts-ui design|clone
+#   design -> Qwen3-TTS-12Hz-1.7B-VoiceDesign on :7860 (invent voices from a description)
+#   clone  -> Qwen3-TTS-12Hz-1.7B-Base on :7861 (speak with a fixed reference voice)
+#
+# Installed at /srv/ai/tts/qwen-tts-ui, called by qwen-tts-{design,clone}.service.
+# The model is passed as a local snapshot path: with a repo id, qwen_tts asks
+# the Hugging Face API on every start, which fails offline.
+set -euo pipefail
+
+TTS=/srv/ai/tts
+export HF_HOME=$TTS/hf-cache
+export HF_HUB_OFFLINE=1
+export HF_HUB_DISABLE_TELEMETRY=1
+export GRADIO_ANALYTICS_ENABLED=False
+
+case "${1:-}" in
+  design) repo=Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign; port=7860 ;;
+  clone)  repo=Qwen/Qwen3-TTS-12Hz-1.7B-Base;        port=7861 ;;
+  *) echo "usage: $0 design|clone" >&2; exit 2 ;;
+esac
+
+ckpt=$("$TTS/qwen3-tts/bin/python" -c \
+  "from huggingface_hub import snapshot_download as s; print(s('$repo', local_files_only=True))")
+
+# No flash-attn installed (needs a long compile); sdpa is fine for a 1.7B model.
+exec "$TTS/qwen3-tts/bin/qwen-tts-demo" "$ckpt" --no-flash-attn --ip 0.0.0.0 --port "$port"
