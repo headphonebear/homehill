@@ -1,0 +1,18 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ emoji-tray — Service (ClusterIP) → nginx on 8080                            ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: emoji-tray
+  namespace: emoji-tray
+  labels:
+    app: emoji-tray
+spec:
+  type: ClusterIP
+  selector:
+    app: emoji-tray
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

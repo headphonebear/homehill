@@ -13,6 +13,15 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-11-04] "A Tray Full of Bears" 🐻
+Same evening, the bonus round: our own emoji picker instead of getemoji.com (13 third-party hosts, no dark mode, stuck at Emoji 17).
+
+### Added
+- **emoji-tray**, our first **public** project: [github.com/headphonebear/emoji-tray](https://github.com/headphonebear/emoji-tray) (MIT). A static page with Emoji 18.0 + CLDR 49, search in en/de/ru (so the Bärin can type „кофе“), a skin-tone switch instead of five blocks, favorites and own combos in the browser, dark mode, and no third-party requests. The image is built by GitHub Actions → `ghcr.io/headphonebear/emoji-tray`
+- **emoji-tray on Orchard** (`emoji.homehill.de`, internal only): Kustomize app, stateless, `selfHeal: true`. The Homehill tray (🐻 😄 ☕️ 🍎 🦐 🦉 🚀) and shared combos live in `clusters/apps/emoji-tray/orchard/config.json`. A `configMapGenerator` hashes it into the ConfigMap name, so editing the file means one commit and an automatic rollout, without a new image. nginx-unprivileged as UID 101, read-only root FS, all capabilities dropped
+
+---
+
 ## [2026-11-04] "Many Folds for Two Printers" 🖨️
 A shared 3D-model catalogue for both workshops — Roberto (A1) and Roberti (A1 mini). The wish came in through Hive thread `manyfold`.
 

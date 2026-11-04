@@ -1,0 +1,10 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ emoji-tray — Namespace                                                     ║
+# ║ Declared as a resource (not CreateNamespace) — same pattern as isley.       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: emoji-tray
+  labels:
+    app: emoji-tray

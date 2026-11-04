@@ -1,0 +1,32 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ emoji-tray — ArgoCD Application (our own emoji picker, emoji.homehill.de)   ║
+# ║ Kustomize app (no `helm:` block). Code + image live in the public repo      ║
+# ║ github.com/headphonebear/emoji-tray; only the Homehill config is here.      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: emoji-tray
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/emoji-tray/orchard
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: emoji-tray
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      # WHY selfHeal:true (unlike isley/manyfold): fully stateless — no PVC,
+      # so no Multi-Attach risk. Drift gets corrected, like traefik/argocd.
+      # prune:true also cleans up the OLD hashed ConfigMaps after a config edit.
+    syncOptions:
+      - CreateNamespace=false

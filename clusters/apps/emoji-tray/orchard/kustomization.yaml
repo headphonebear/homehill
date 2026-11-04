@@ -1,0 +1,35 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ emoji-tray — Kustomization (Homehill's own emoji picker)                    ║
+# ║                                                                            ║
+# ║ WHAT: a static emoji picker, built by us as a PUBLIC project:               ║
+# ║ github.com/headphonebear/emoji-tray (image on ghcr.io). Replaces            ║
+# ║ getemoji.com for Bär + Bärin — no trackers, dark mode, en/de/ru search.     ║
+# ║                                                                            ║
+# ║ WHY Kustomize: there is no upstream chart (we ARE upstream), and the app is  ║
+# ║ one stateless Deployment — plain manifests are the simplest honest thing.   ║
+# ║                                                                            ║
+# ║ THE HOMEHILL PART lives in config.json next to this file: our tray          ║
+# ║ (🐻 😄 ☕️ …) and shared combos. The public image only ships a neutral       ║
+# ║ default. configMapGenerator turns config.json into a ConfigMap whose name   ║
+# ║ carries a content hash → editing config.json = new name = Kustomize         ║
+# ║ rewrites the Deployment's reference = automatic rollout. That's what makes  ║
+# ║ "add an emoji to the tray" a one-line commit, no image rebuild.             ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: emoji-tray
+
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingressroute.yaml
+
+configMapGenerator:
+  - name: emoji-tray-config
+    files:
+      - config.json
+    # WHY generator (not a hand-written ConfigMap): the hash suffix is the
+    # rollout trigger. The pod mounts the file via subPath, and subPath mounts
+    # NEVER see in-place ConfigMap updates — a new name forces a new pod.
