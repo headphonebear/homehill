@@ -68,6 +68,7 @@ number goblins anyway.
 | `mqtt-svc` | 7002 | 🏠 MQTT / Node-RED (home automation) | reserved |
 | `jellyfin-svc` | 7003 | 🪦 Jellyfin | retired — replaced by belfry; **don't reuse** the number |
 | `ai-svc` | 7004 | 🌻 `ai`'s goblin. Runs the ingestor (Outline → Qdrant CronJob on Orchard, image `homehill/ingestor`) | active |
+| `manyfold-svc` | 7005 | 🖨️ Manyfold, the 3D-model catalogue on Orchard (`PUID`/`PGID` + pod `fsGroup`). Owns the files in its library PVC — only *copies* live there; the originals stay with `tinkerbear` / `tinkerbearin` | active |
 
 Retired numbers stay retired: old files with that owner may still be around,
 and a new service must never inherit them by accident.

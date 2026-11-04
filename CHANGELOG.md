@@ -13,6 +13,16 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-11-04] "Many Folds for Two Printers" 🖨️
+A shared 3D-model catalogue for both workshops — Roberto (A1) and Roberti (A1 mini). The wish came in through Hive thread `manyfold`.
+
+### Added
+- **Manyfold on Orchard** (`manyfold.homehill.de`, internal only): Kustomize app, the second one after isley, because there is no official Helm chart. Image `ghcr.io/manyfold3d/manyfold:0.153.0` + CNPG Postgres (`manyfold-db`) + Valkey 8.1.11 without persistence (Sidekiq queue) + Longhorn library PVC (20Gi). `MULTIUSER` on, registration stays closed (the admin creates the accounts), no `FEDERATION`, no `HTTPS_ONLY` (HSTS is one-way). Container starts as root for s6 and drops to `manyfold-svc` 7005 with exactly the 4 capabilities upstream asks for
+- **No S3 backup yet** for the Manyfold DB, and no Longhorn backup target for the library. Deliberate, until the big backup topic lands, so the **source folders stay**. Manyfold writes into its library (organises uploads, writes `datapackage.json`), so it only ever holds *copies*, filled via browser upload after sorting
+- `docs/uid-schema.md`: goblin `manyfold-svc` 7005
+
+---
+
 ## [2026-10-24] "The Chick Gets Tidied" 🐣
 chick, the dev server, gets its first service visit since bring-up — and finally its own page in the book.
 

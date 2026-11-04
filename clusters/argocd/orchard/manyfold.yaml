@@ -1,0 +1,39 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold — ArgoCD Application (3D-model catalogue, both print workshops)    ║
+# ║                                                                            ║
+# ║ Kustomize app (second after isley): no `helm:` block — ArgoCD auto-detects  ║
+# ║ the kustomization.yaml at source.path.                                       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: manyfold
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/manifest-generate-paths: .
+    # WHY: ArgoCD only regenerates when something under THIS path changes.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+    # WHY: cascading delete — removing the app cleans up its resources.
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/headphonebear/homehill.git
+    targetRevision: main
+    path: clusters/apps/manyfold/orchard
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: manyfold
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+      # ╔══════════════════════════════════════════════════════════════════════╗
+      # ║ WHY selfHeal:false (same call as isley/vaultwarden/monitoring): RWO      ║
+      # ║ Longhorn PVCs (library + CNPG data). Drift-healing can spawn a second    ║
+      # ║ pod before the first lets go → Multi-Attach. Sync MANUALLY              ║
+      # ║ (`argocd app sync manyfold`). prune stays true.                         ║
+      # ╚══════════════════════════════════════════════════════════════════════╝
+    syncOptions:
+      - CreateNamespace=false
+      # WHY false: namespace.yaml declares it as a resource.

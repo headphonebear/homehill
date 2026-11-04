@@ -1,0 +1,54 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold IngressRoute — https://manyfold.homehill.de                        ║
+# ║ Repo convention: HTTP→HTTPS redirect + the HTTPS route, TLS via the shared   ║
+# ║ *.homehill.de wildcard cert.                                                 ║
+# ║                                                                            ║
+# ║ Internal-only (homehill.de, behind the router). Pi-hole needs the A-record   ║
+# ║ manyfold.homehill.de → apple (192.168.1.50).                                 ║
+# ║                                                                            ║
+# ║ PROXY NOTES from Manyfold's docs, and why Traefik needs nothing extra:       ║
+# ║  • X-Forwarded-Proto/-Host/-For: Traefik sets them by default → no CORS-     ║
+# ║    origin errors, Rails sees https.                                          ║
+# ║  • WebSocket on /cable (live UI updates): Traefik proxies Upgrade natively.  ║
+# ║  • Upload body size: Traefik has no default body limit (nginx's 1M default   ║
+# ║    is what their client_max_body_size line is about). Manyfold's own cap is  ║
+# ║    MAX_FILE_UPLOAD_SIZE, default 1 GiB.                                      ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: manyfold-http
+  namespace: manyfold
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`manyfold.homehill.de`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: traefik
+          # WHY: shared redirect middleware (same as isley/vaultwarden/memos).
+      services:
+        - name: manyfold
+          port: 3214
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: manyfold-https
+  namespace: manyfold
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`manyfold.homehill.de`)
+      kind: Rule
+      services:
+        - name: manyfold
+          port: 3214
+  tls:
+    secretName: homehill-wildcard-tls
+    # WHY: the *.homehill.de wildcard via the default TLSStore — same reference
+    # every other app uses.
