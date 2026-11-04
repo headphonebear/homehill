@@ -138,6 +138,20 @@ spec:
               # Registration stays CLOSED: `registration_enabled` defaults to
               # REGISTRATION=enabled, which we don't set; `approve_signups`
               # defaults true on top. Accounts are made by the admin.
+            - name: MIN_PASSWORD_SCORE
+              value: "0"
+              # ╔════════════════════════════════════════════════════════════════╗
+              # ║ WHY 0 (= no strength check at all; upstream default is 4 on a    ║
+              # ║ 0–4 zxcvbn scale): Stefan, 2026-11-04 — "so weit runter wie      ║
+              # ║ geht". Internal-only (homehill.de, no public IP, registration    ║
+              # ║ closed), two known humans, and the catalogue holds STLs, not     ║
+              # ║ secrets. Score 4 demanded more than his work passwords do.       ║
+              # ║ Upstream says never below 3 on PUBLIC instances — so if this     ║
+              # ║ ever gets exposed (FEDERATION, a public route), raise it FIRST.  ║
+              # ║ Only checked when a password is set/changed; existing ones stay. ║
+              # ║ Floor that REMAINS: Devise's default length 6–128 (no            ║
+              # ║ password_length override in their devise.rb, v0.153.0).          ║
+              # ╚════════════════════════════════════════════════════════════════╝
             # FEDERATION: deliberately NOT set → ActivityPub off (default). This
             # is an internal catalogue; nothing should federate out.
             - name: PUBLIC_HOSTNAME
