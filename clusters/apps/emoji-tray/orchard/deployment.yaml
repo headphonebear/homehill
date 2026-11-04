@@ -1,0 +1,93 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ emoji-tray — Deployment                                                    ║
+# ║ One nginx-unprivileged container serving static files. No state at all:    ║
+# ║ favourites/own combos live in each visitor's browser (localStorage), the    ║
+# ║ shared tray/combos come from the ConfigMap. Nothing here needs a backup.    ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emoji-tray
+  namespace: emoji-tray
+  labels:
+    app: emoji-tray
+spec:
+  replicas: 1
+  # WHY 1: two humans in a LAN. Stateless, so RollingUpdate (the default) is
+  # fine here — no RWO volume, no Multi-Attach risk, zero-downtime rollouts.
+  selector:
+    matchLabels:
+      app: emoji-tray
+  template:
+    metadata:
+      labels:
+        app: emoji-tray
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        # WHY 101: the `nginx` user baked into nginx-unprivileged. It runs a
+        # web server and owns nothing (read-only FS) — no 7xxx goblin needed,
+        # same reasoning as Valkey's 999 in manyfold.
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: emoji-tray
+          image: ghcr.io/headphonebear/emoji-tray:0.1.0
+          # WHY pinned: our own release tag (git tag v0.1.0 → GitHub Actions →
+          # ghcr.io). Public package, so no imagePullSecret. Tag has NO `v`
+          # (docker/metadata-action semver pattern). Bump = new release in the
+          # emoji-tray repo first, then this line.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            # WHY this tight: static files on an unprivileged port. Verified
+            # locally with `docker run --read-only --tmpfs /tmp` (2026-11-04).
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+              # WHY: nginx-unprivileged keeps its pid file + temp dirs in /tmp —
+              # the only writable path it needs.
+            - name: config
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
+              readOnly: true
+              # WHY subPath: overlays ONE file onto the image's web root and
+              # leaves the rest (app, data, config.default.json) untouched.
+              # (subPath never live-updates — see kustomization.yaml for why
+              # that's fine: the hashed ConfigMap name forces a new pod.)
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            # WHY /healthz for both: a static nginx has no backend that could
+            # make "alive" and "ready" differ.
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+              # WHY: nginx serving ~600 KB of files idles at a few MiB.
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: config
+          configMap:
+            name: emoji-tray-config
+            # Kustomize appends the content hash to this name at render time.
