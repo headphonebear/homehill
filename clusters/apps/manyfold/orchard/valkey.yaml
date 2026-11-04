@@ -1,0 +1,105 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold — Valkey (Sidekiq job queue)                                       ║
+# ║                                                                            ║
+# ║ WHY it exists: the standard Manyfold image REQUIRES `REDIS_URL`. Its Procfile ║
+# ║ runs two Sidekiq workers (default + performance) next to the Rails server;   ║
+# ║ scans, preview renders, analysis and organise jobs queue through here.       ║
+# ║ (Unlike Hive/Forgejo, where we could skip Valkey — Manyfold can't.)          ║
+# ║                                                                            ║
+# ║ WHY Valkey, not Redis: same choice as chick (BSD licence, RESP-compatible,   ║
+# ║ Sidekiq doesn't care). Major 8, matching chick.                              ║
+# ║                                                                            ║
+# ║ WHY NO persistence (emptyDir, no PVC): it only holds queued/running jobs.    ║
+# ║ Lose them on a restart and the worst case is a scan/render that has to be    ║
+# ║ re-triggered from the UI ("Scan" button). A second RWO Longhorn PVC would    ║
+# ║ buy Multi-Attach risk for data we can recreate. --save "" + --appendonly no  ║
+# ║ make that explicit instead of letting Valkey write dump.rdb into the void.   ║
+# ║                                                                            ║
+# ║ WHY no password: ClusterIP only, reachable inside the cluster; the queue     ║
+# ║ holds job IDs, not secrets. Same trust level as the other in-namespace       ║
+# ║ backends. If the namespace ever gets a NetworkPolicy, this is the first      ║
+# ║ thing to fence (only app=manyfold may talk to it).                           ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: manyfold
+  labels:
+    app: valkey
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        # WHY 999: the `valkey` user baked into the official alpine image. It runs
+        # nothing of ours and owns no data (emptyDir) — no 7xxx goblin needed.
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.1.11-alpine
+          # WHY pinned: latest 8.1.x at build time (verified via
+          # `docker manifest inspect`, 2026-11-04; 8.1.12 / 8.2.0 don't exist
+          # yet). chick runs 8.1.10 — same major, one patch newer.
+          imagePullPolicy: IfNotPresent
+          args:
+            - --save
+            - ""
+            - --appendonly
+            - "no"
+          ports:
+            - name: valkey
+              containerPort: 6379
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            # WHY this tight: Valkey needs nothing but a socket and /data.
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: valkey
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+              # WHY: a job queue for two users is a few KB. 128Mi is a guardrail.
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: manyfold
+  labels:
+    app: valkey
+spec:
+  type: ClusterIP
+  selector:
+    app: valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey

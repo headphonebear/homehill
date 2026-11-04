@@ -1,0 +1,207 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold — Deployment                                                      ║
+# ║ One pod, one container — but THREE processes inside: s6-overlay (/init)      ║
+# ║ starts foreman, which runs the Procfile: Rails (port 3214) + two Sidekiq     ║
+# ║ workers (default, performance). No separate worker Deployment upstream.      ║
+# ║                                                                            ║
+# ║ Talks to CNPG (manyfold-db-rw) + Valkey (valkey:6379), keeps the library on  ║
+# ║ a Longhorn RWO PVC at /libraries.                                            ║
+# ║                                                                            ║
+# ║ FIRST RUN (manual, once): open https://manyfold.homehill.de → wizard creates ║
+# ║ the admin (Stefan) → add library: path `/libraries`, set as default (uploads ║
+# ║ land in `default_library`) → create Bärin's account by hand (registration is ║
+# ║ OFF by default — see MULTIUSER below).                                       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manyfold
+  namespace: manyfold
+  labels:
+    app: manyfold
+spec:
+  replicas: 1
+  # WHY: single instance on an RWO library volume; no scale story needed for
+  # two workshops.
+
+  selector:
+    matchLabels:
+      app: manyfold
+
+  strategy:
+    type: Recreate
+    # WHY Recreate: single replica on a ReadWriteOnce Longhorn PVC. RollingUpdate
+    # would start the new pod before the old one lets go → Multi-Attach, stuck
+    # rollout. Same lesson as Grafana/Vaultwarden/isley (and why the Application
+    # runs selfHeal:false).
+
+  template:
+    metadata:
+      labels:
+        app: manyfold
+    spec:
+      # ── Pod-level security ──────────────────────────────────────────────────
+      securityContext:
+        fsGroup: 7005
+        fsGroupChangePolicy: OnRootMismatch
+        # WHY fsGroup: the entrypoint chowns tmp/, log/ and plugins — but NOT the
+        # library. fsGroup makes kubelet hand /libraries to group 7005 (setgid,
+        # group-writable), so the app user can write there from the first upload.
+        # OnRootMismatch: only re-walk the volume if its root is wrong, not on
+        # every start (cheap now, matters once there are thousands of files).
+        seccompProfile:
+          type: RuntimeDefault
+        # WHY no runAsUser/runAsNonRoot here: see the container securityContext.
+
+      containers:
+        - name: manyfold
+          image: ghcr.io/manyfold3d/manyfold:0.153.0
+          # WHY pinned to 0.153.0 (2026-10-21, latest stable when built). Tag has
+          # NO `v` prefix (semver pattern in their docker.yml workflow) — verified
+          # via `docker manifest inspect`, amd64+arm64. Releases are frequent
+          # (0.15x every couple of weeks) → bump deliberately, read notes for
+          # data migrations first.
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 3214
+
+          # ── Container security ──────────────────────────────────────────────
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN", "DAC_OVERRIDE", "SETUID", "SETGID"]
+            # ╔════════════════════════════════════════════════════════════════╗
+            # ║ WHY root at start + these 4 capabilities: the image runs         ║
+            # ║ s6-overlay (/init) as root, chowns tmp/log/plugins to PUID:PGID,  ║
+            # ║ then `s6-setuidgid $PUID:$PGID` drops to the goblin. Upstream     ║
+            # ║ explicitly says Docker's `user:` (= runAsUser) is NOT supported   ║
+            # ║ — "it will drop privileges too early". So we can't set            ║
+            # ║ runAsNonRoot; instead we strip everything except exactly what     ║
+            # ║ the docs list (cap_drop ALL + CHOWN, DAC_OVERRIDE, SETUID,        ║
+            # ║ SETGID). allowPrivilegeEscalation:false = their                   ║
+            # ║ `no-new-privileges:true`. The app processes themselves run as     ║
+            # ║ 7005, not root.                                                   ║
+            # ╚════════════════════════════════════════════════════════════════╝
+
+          env:
+            # ── Who the app runs as ─────────────────────────────────────────────
+            - name: PUID
+              value: "7005"
+            - name: PGID
+              value: "7005"
+              # WHY 7005: `manyfold-svc`, next free goblin in docs/uid-schema.md.
+              # It runs the service and owns the library files it writes; the
+              # humans own their ORIGINAL folders on their own machines.
+
+            # ── Rails secret ────────────────────────────────────────────────────
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: manyfold-secret-key
+                  key: SECRET_KEY_BASE
+                  # WHY: signs sessions/cookies. Changing it logs everyone out —
+                  # so it lives in a SealedSecret, never regenerated per deploy.
+
+            # ── Database (CNPG cluster manyfold-db) ─────────────────────────────
+            - name: DATABASE_ADAPTER
+              value: postgresql
+            - name: DATABASE_HOST
+              value: manyfold-db-rw
+              # WHY -rw: CNPG's read-write endpoint, survives pod restarts.
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_USER
+              value: manyfold
+            - name: DATABASE_NAME
+              value: manyfold
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: manyfold-db-app
+                  key: password
+                  # WHY: CNPG-generated at bootstrap; only this key is consumed.
+
+            # ── Job queue ───────────────────────────────────────────────────────
+            - name: REDIS_URL
+              value: redis://valkey:6379/1
+              # WHY db 1: upstream's example; keeps db 0 free should anything else
+              # ever share this Valkey.
+
+            # ── Features ────────────────────────────────────────────────────────
+            - name: MULTIUSER
+              value: enabled
+              # WHY: logins + roles (administrator/moderator/contributor/member/
+              # printer). Default is single-user with NO login at all.
+              # Registration stays CLOSED: `registration_enabled` defaults to
+              # REGISTRATION=enabled, which we don't set; `approve_signups`
+              # defaults true on top. Accounts are made by the admin.
+            # FEDERATION: deliberately NOT set → ActivityPub off (default). This
+            # is an internal catalogue; nothing should federate out.
+            - name: PUBLIC_HOSTNAME
+              value: manyfold.homehill.de
+              # WHY: used for absolute links (and OIDC/federation, both unused).
+            # HTTPS_ONLY: deliberately NOT set. It turns on HSTS, which upstream
+            # calls "effectively a one-way switch". Traefik already redirects
+            # http→https (ingressroute.yaml) and sends X-Forwarded-Proto, so Rails
+            # knows it's behind TLS without it.
+
+            # ── Sizing (fewer processes than upstream's defaults) ───────────────
+            - name: WEB_CONCURRENCY
+              value: "2"
+            - name: RAILS_MAX_THREADS
+              value: "5"
+              # WHY: upstream defaults are 4 processes × 16 threads → up to 69 DB
+              # connections and a lot of RAM for two humans. 2×5 + 4 + 1 = 15
+              # connections (formula from their configuration docs).
+            # DEFAULT_WORKER_CONCURRENCY (4) / PERFORMANCE_WORKER_CONCURRENCY (1):
+            # left at upstream defaults. The performance worker is the heavy one
+            # (mesh analysis, conversions) — 1 at a time is what keeps RAM sane.
+
+          volumeMounts:
+            - name: libraries
+              mountPath: /libraries
+              # WHY /libraries: entered as the library path in the UI on first
+              # run. Path must be the IN-CONTAINER path.
+
+          # ── Probes ──────────────────────────────────────────────────────────
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+            # WHY a startupProbe (5 min budget): every start runs
+            # `rails db:prepare:with_data` (migrations) before Rails listens. A
+            # big upgrade migration must not get the pod killed half-way.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            # WHY /health: Rails' built-in health route (config/routes/meta.rb) —
+            # 200 once the app booted.
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 20
+            # WHY tcpSocket: liveness = "is the process alive?", nothing deeper —
+            # same reasoning as isley.
+
+          resources:
+            requests:
+              cpu: 200m
+              memory: 768Mi
+            limits:
+              memory: 2Gi
+              # WHY: Rails + 2 Sidekiq processes idle around several hundred MB;
+              # upstream warns analysis/conversion jobs "use a lot of memory".
+              # 2Gi limit as guardrail — if previews of big meshes OOM, raise this
+              # first. No CPU limit (renders would just crawl).
+
+      volumes:
+        - name: libraries
+          persistentVolumeClaim:
+            claimName: manyfold-libraries

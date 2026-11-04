@@ -1,0 +1,20 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold — Service (ClusterIP)                                             ║
+# ║ Rails listens on 3214 (PORT baked into the image). Reached in-cluster and    ║
+# ║ via the Traefik IngressRoute only.                                           ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: manyfold
+  namespace: manyfold
+  labels:
+    app: manyfold
+spec:
+  type: ClusterIP
+  selector:
+    app: manyfold
+  ports:
+    - name: http
+      port: 3214
+      targetPort: http

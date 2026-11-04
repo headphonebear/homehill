@@ -1,0 +1,11 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold — Namespace                                                       ║
+# ║ Declared as part of the app (not via CreateNamespace) so it is GitOps-       ║
+# ║ managed like everything else — same pattern as isley.                        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: manyfold
+  labels:
+    app: manyfold

@@ -1,0 +1,31 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold — library PVC                                                     ║
+# ║ Longhorn RWO volume mounted at /libraries. This IS the library: every        ║
+# ║ uploaded model lands here, organised by Manyfold's path template.            ║
+# ║                                                                            ║
+# ║ ⚠️  MANYFOLD WRITES INTO ITS LIBRARY. Uploads are always "organised" (moved/  ║
+# ║ renamed per path template), and every model save drops a `datapackage.json`  ║
+# ║ into the model folder (after_save hook; an upgrade job back-fills them).     ║
+# ║ Checked in the v0.153.0 source, 2026-11-04. So: ONLY ever copies in here —   ║
+# ║ never point a library at someone's original folder.                          ║
+# ║                                                                            ║
+# ║ ⚠️  NO OFF-CLUSTER BACKUP YET (Longhorn has no backup target). The source     ║
+# ║ folders on tinkerbear's / Bärin's side stay until that's fixed.              ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: manyfold-libraries
+  namespace: manyfold
+  labels:
+    app: manyfold
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 20Gi
+      # WHY 20Gi: Stefan's estimate for BOTH workshops is ≤ ~10 GB before
+      # sorting ("vermutlich viel Schrott"). 2× headroom for previews/renders and
+      # growth (own Blender models). Longhorn expands online later.

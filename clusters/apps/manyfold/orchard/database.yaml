@@ -1,0 +1,63 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold PostgreSQL — CloudNativePG Cluster                                 ║
+# ║ Single-instance PG holding the catalogue: models, files, tags, collections,  ║
+# ║ users, permissions, OAuth apps/tokens. The STL files themselves live on the  ║
+# ║ library PVC (pvc.yaml), NOT in here.                                         ║
+# ║                                                                            ║
+# ║ FRESH INSTALL: created EMPTY (bootstrap.initdb). Manyfold's entrypoint runs   ║
+# ║ `rails db:prepare:with_data` on every start → schema + data migrations        ║
+# ║ apply themselves against the empty db. No restore/cutover dance.             ║
+# ║                                                                            ║
+# ║ ⚠️  NO S3 BACKUP YET — deliberate (Stefan, 2026-11-04). Unlike isley/memos/   ║
+# ║ vaultwarden there is no barmanObjectStore + ScheduledBackup here. It arrives  ║
+# ║ with the big "Backup nach S3" topic (Longhorn has no backup target either).  ║
+# ║ Until then: nobody deletes the SOURCE folders the models were uploaded from. ║
+# ║ TO ADD LATER: copy the backup: block + ScheduledBackup from                  ║
+# ║ clusters/apps/isley/orchard/database.yaml, prefix orchard/manyfold, fresh     ║
+# ║ per-app Hetzner keys as SealedSecret `manyfold-db-s3-backup`.                 ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: manyfold-db
+  namespace: manyfold
+spec:
+  instances: 1
+  # WHY: one instance. Durability today = Longhorn block replication only (see
+  # the ⚠️ above). HA = bump instances later.
+
+  # WHY no imageName: operator's default first-party PostgreSQL image, same as
+  # every other CNPG cluster here.
+
+  # ── NODE MAINTENANCE TOGGLE ─────────────────────────────────────────────────
+  # WHY: with instances:1, CNPG's primary PDB blocks `kubectl drain` forever.
+  # inProgress:true drops that PDB; reusePVC:true brings the pod back on the SAME
+  # Longhorn PVC. Flip to true + sync BEFORE a node run, back to false after.
+  # (Same toggle as isley — the maintenance runbook flips them all together.)
+  nodeMaintenanceWindow:
+    inProgress: false
+    reusePVC: true
+
+  storage:
+    size: 5Gi
+    storageClass: longhorn
+    # WHY 5Gi: metadata rows for a few thousand models are small. Expandable.
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+    # WHY: two humans + maybe two Claudes. Memory limit as guardrail, no CPU limit
+    # (don't throttle checkpoints). Connection count is kept low on the app side
+    # (WEB_CONCURRENCY/RAILS_MAX_THREADS in deployment.yaml) — default 100
+    # max_connections is plenty.
+
+  bootstrap:
+    initdb:
+      database: manyfold
+      owner: manyfold
+      # WHY: CNPG creates db `manyfold` owned by role `manyfold` and generates the
+      # password into secret `manyfold-db-app`. The Deployment takes only its
+      # `password` key → no credential in Git.

@@ -1,0 +1,33 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ Manyfold — Kustomization (3D-model catalogue for both print workshops)      ║
+# ║                                                                            ║
+# ║ WHAT: self-hosted library for STL/3MF & co, shared by Bär (tinkerbear, A1    ║
+# ║ "Roberto") and Bärin (tinkerbearin, A1 mini "Roberti"). Wish came via Hive   ║
+# ║ thread `manyfold` (2026-10-27 → accepted 2026-11-04).                        ║
+# ║                                                                            ║
+# ║ WHY Kustomize (second one after isley): Manyfold ships NO official Helm      ║
+# ║ chart — only two third-party ones on ArtifactHub. Wrapping a stranger's      ║
+# ║ chart buys templating we'd have to audit anyway; plain manifests are what    ║
+# ║ you read is what deploys.                                                    ║
+# ║                                                                            ║
+# ║ SHAPE: standard image (not "solo") → Postgres via CNPG + a tiny Valkey for   ║
+# ║ the Sidekiq job queue + one Longhorn PVC holding the library itself.         ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: manyfold
+
+resources:
+  # ── Namespace first ────────────────────────────────────────────────────────
+  - namespace.yaml
+  # ── Data layer ─────────────────────────────────────────────────────────────
+  - database.yaml
+  - valkey.yaml
+  - secret-key-sealedsecret.yaml
+  # ── Workload ───────────────────────────────────────────────────────────────
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  # ── Ingress ────────────────────────────────────────────────────────────────
+  - ingressroute.yaml
