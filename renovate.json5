@@ -1,0 +1,99 @@
+// ╔════════════════════════════════════════════════════════════════════════════╗
+// ║ Renovate — "how old is it?" for Homehill                                    ║
+// ║                                                                            ║
+// ║ WHAT: the hosted Mend Renovate app (Community/free, runs ~every 4h) reads   ║
+// ║ this repo, spots every version pin (Chart.yaml deps, image tags in          ║
+// ║ values.yaml / compose files / plain manifests) and opens a PR per update.   ║
+// ║ Merging the PR IS the upgrade → ArgoCD rolls it out. GitOps all the way.    ║
+// ║                                                                            ║
+// ║ PHILOSOPHY: report, don't auto-update. Nothing here automerges. Majors      ║
+// ║ don't even get a PR until the Bär ticks them in the Dependency Dashboard    ║
+// ║ issue. Small updates arrive once a week, Thursday — reviewed in the         ║
+// ║ evening, so the weekend stays free (or free for playing).                   ║
+// ║                                                                            ║
+// ║ Set up 2026-11-05 (onboarding PR #72). JSON5 so we can keep WHY comments.   ║
+// ╚════════════════════════════════════════════════════════════════════════════╝
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:recommended'],
+
+  // WHY: schedules below are read in local time, not UTC.
+  timezone: 'Europe/Berlin',
+
+  packageRules: [
+    // ── 1. Majors only on request ─────────────────────────────────────────────
+    // WHY: majors are where things break (Longhorn 1.11 needed a full volume
+    // detach; postgres 16→18 needs a data-dir migration; memos renames its MCP
+    // tools). They show up as a checkbox in the Dependency Dashboard issue;
+    // ticking it creates the PR on the next run. No schedule on purpose, so a
+    // ticked major comes right away instead of waiting for Thursday.
+    {
+      matchUpdateTypes: ['major'],
+      dependencyDashboardApproval: true,
+    },
+
+    // ── 2. Everything small: Thursdays ────────────────────────────────────────
+    // WHY: one fixed day per week instead of a constant trickle. Window is
+    // 06–18h because the free tier only runs every ~4h — a narrow window could
+    // be missed entirely. PRs stay ONE PER APP (no group): merge = rollout, and
+    // when something breaks we want to know which merge did it.
+    {
+      matchUpdateTypes: ['minor', 'patch', 'digest', 'pin', 'pinDigest'],
+      schedule: ['* 6-17 * * 4'],
+    },
+
+    // ── 2b. Treated like majors, even for "minor" bumps ───────────────────────
+    // WHY Longhorn: upgrades must go one minor at a time (1.11 → 1.12 → 1.13),
+    // and a minor can need a full volume detach (see the 1.11 IM-leak saga).
+    // Renovate happily proposes 1.11 → 1.13 in one jump — not on our storage.
+    // WHY memos: still 0.x, so every minor may break; 0.30 renamed the MCP
+    // tools that Claude uses. Must come AFTER rule 2 so it overrides the
+    // Thursday schedule (a ticked box should arrive right away, like majors).
+    {
+      matchPackageNames: ['longhorn', 'ghcr.io/usememos/memos'],
+      dependencyDashboardApproval: true,
+      schedule: ['at any time'],
+    },
+
+    // ── 3a. monitoring needs a manual sync ────────────────────────────────────
+    // WHY: monitoring runs with selfHeal:false (Grafana RWO PVC → Multi-Attach
+    // on surprise ReplicaSets). Merging alone does NOT roll it out.
+    {
+      matchFileNames: ['clusters/apps/monitoring/**'],
+      addLabels: ['manual-sync'],
+      prBodyNotes: [
+        '⚠️ **monitoring has `selfHeal: false`** — after merging, run `argocd app sync monitoring` (see clusters/docs/TROUBLESHOOTING.md for Multi-Attach).',
+      ],
+    },
+
+    // ── 3b. Compose hosts are deployed by hand ────────────────────────────────
+    // WHY: nothing watches servers/ — after the merge, the host still runs the
+    // old image until someone pulls. (Later: Ansible.)
+    {
+      matchFileNames: ['servers/**'],
+      addLabels: ['host-deploy'],
+      prBodyNotes: [
+        '⚠️ **Merging does not deploy this.** On the host: `docker compose pull && docker compose up -d` in the stack directory.',
+      ],
+    },
+
+    // ── 4. Our internal registry is unreachable from Mend ─────────────────────
+    // WHY: git.homehill.de lives in the LAN only; lookups always fail and
+    // would sit as a warning forever. Our own images get bumped by us.
+    {
+      matchPackageNames: ['git.homehill.de/**'],
+      enabled: false,
+    },
+  ],
+
+  // ── 5. Kustomize apps: read their plain manifests ──────────────────────────
+  // WHY: the kubernetes manager has no default file pattern. We list the
+  // Kustomize app dirs explicitly instead of all of clusters/apps — a broad
+  // pattern would also hit Helm templates full of {{ }}.
+  // NEW KUSTOMIZE APP? Add its name to the group below.
+  kubernetes: {
+    managerFilePatterns: [
+      '/^clusters/apps/(isley|emoji-tray|manyfold)/orchard/[^/]+\\.yaml$/',
+    ],
+  },
+}
