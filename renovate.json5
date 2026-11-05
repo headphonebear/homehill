@@ -42,6 +42,19 @@
       schedule: ['* 6-17 * * 4'],
     },
 
+    // ── 2b. Treated like majors, even for "minor" bumps ───────────────────────
+    // WHY Longhorn: upgrades must go one minor at a time (1.11 → 1.12 → 1.13),
+    // and a minor can need a full volume detach (see the 1.11 IM-leak saga).
+    // Renovate happily proposes 1.11 → 1.13 in one jump — not on our storage.
+    // WHY memos: still 0.x, so every minor may break; 0.30 renamed the MCP
+    // tools that Claude uses. Must come AFTER rule 2 so it overrides the
+    // Thursday schedule (a ticked box should arrive right away, like majors).
+    {
+      matchPackageNames: ['longhorn', 'ghcr.io/usememos/memos'],
+      dependencyDashboardApproval: true,
+      schedule: ['at any time'],
+    },
+
     // ── 3a. monitoring needs a manual sync ────────────────────────────────────
     // WHY: monitoring runs with selfHeal:false (Grafana RWO PVC → Multi-Attach
     // on surprise ReplicaSets). Merging alone does NOT roll it out.
