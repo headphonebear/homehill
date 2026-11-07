@@ -34,7 +34,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: emoji-tray
-          image: ghcr.io/headphonebear/emoji-tray:0.1.0
+          image: ghcr.io/headphonebear/emoji-tray:0.1.1
           # WHY pinned: our own release tag (git tag v0.1.0 → GitHub Actions →
           # ghcr.io). Public package, so no imagePullSecret. Tag has NO `v`
           # (docker/metadata-action semver pattern). Bump = new release in the

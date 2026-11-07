@@ -20,6 +20,9 @@ and this project uses date-based versioning (YYYY.MM.DD).
 - **mk3 tunnel to chick-postgres**: user `mk3` (2001) on chick exists only as an SSH tunnel. Its key (`mk3@fennek`) may forward to `127.0.0.1:5432` and nothing else — `authorized_keys` options, a `Match User mk3` block in the sshd drop-in (now also in the repo, `servers/chick/sshd/`), and `/sbin/nologin`. Forwarding stays off for everyone else. Postgres stays on loopback; `PG_BIND` untouched
 - **Role + schema `studio`** in chick-postgres (`servers/chick/postgres/roles/studio.sql`): reads all of `public` (incl. future indexer tables via default privileges), writes nothing there; owns schema `studio` for artist lists and whatever grows from them. Password in mk3's `secrets.env` on barn. Tested as `mk3`: 1755 albums, writes to `public` denied
 
+### Fixed
+- **emoji-tray 0.1.0 → 0.1.1**: 🧑‍🩰 showed as 🧑🩰 in Firefox. The Snap sees an older Noto (2.047, GNOME runtime) next to the system's; the font check only sampled per Emoji version. Now every emoji gets a width check too (flags exempt, for Windows). Hex boxes are gone as well
+
 ---
 
 ## [2026-11-04] "A Tray Full of Bears" 🐻
