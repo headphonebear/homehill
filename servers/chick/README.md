@@ -40,6 +40,45 @@ Named for a hatchling: freshly out of the egg, room to grow.
   (`/etc/doas.d/coder.conf`), or `su -`. There is no `sudo` on this box.
 - `coder` is in the `docker` group. Mind that this is **root-equivalent** (anyone
   who can start containers can mount the host filesystem), not "rootless".
+- **User `mk3`** (UID/GID **2001/2001**, same identity as on barn) exists **only
+  as a tunnel** to Postgres — see [the mk3 tunnel](#the-mk3-tunnel) below.
+
+## The mk3 tunnel
+
+Since 2026-11-07 `mk3` (the Claude of the music collection, Linux user `mk3` on
+barn) reads the catalog and keeps its own lists in Postgres. Postgres stays on
+`127.0.0.1`; the way in is an SSH tunnel with a key that can do nothing else.
+
+**From barn, as `mk3`:**
+
+```bash
+ssh -i ~/.ssh/mk3 -o IdentitiesOnly=yes -f -N -L 5432:127.0.0.1:5432 mk3@chick.homehill.de
+set -a; . ~/.config/homehill/secrets.env; set +a     # STUDIO_PG_*
+PGPASSWORD=$STUDIO_PG_PASSWORD psql -h 127.0.0.1 -U studio -d mk3
+```
+
+**What the key may do — three locks, each enough on its own:**
+
+1. `~mk3/.ssh/authorized_keys` on chick:
+   `restrict,port-forwarding,permitopen="127.0.0.1:5432"` (key `mk3@fennek`).
+2. A `Match User mk3` block at the end of
+   [`sshd_config.d/10-homehill.conf`](sshd/10-homehill.conf): forwarding
+   `local` only, `PermitOpen 127.0.0.1:5432`, no TTY, `ForceCommand
+   /sbin/nologin`. Everyone else keeps the stock `AllowTcpForwarding no`.
+3. Login shell `/sbin/nologin` (shadow field `*`, see the Alpine gotcha below).
+
+Tested 2026-11-07: `id` over SSH → "This account is not available"; a forward to
+`127.0.0.1:22` → "administratively prohibited".
+
+**What the DB role may do** — role + schema `studio`, the whole model in
+[`postgres/roles/studio.sql`](postgres/roles/studio.sql) (idempotent):
+read everything in `public` (the indexer's catalog, including tables it adds
+later), write nothing there; own schema `studio` for its lists, with full rights.
+The password is not in the repo — it lives in mk3's `secrets.env` on barn.
+
+WHY not `PG_BIND=0.0.0.0`: that opens 5432 to the whole LAN, and any process on
+barn that knows the password gets in. The tunnel keeps chick's
+"databases on loopback" design intact and ties access to one key.
 
 ## What runs here
 
