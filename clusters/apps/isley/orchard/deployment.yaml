@@ -38,7 +38,7 @@ spec:
     spec:
       containers:
         - name: isley
-          image: dwot/isley:2.3.0
+          image: dwot/isley:2.5.4
           # WHY pinned to 2.3.0 (NB: the Docker Hub tag has NO `v` prefix — `v2.3.0`
           # does not exist and would ImagePullBackOff). No chasing :latest, matches
           # the release we vetted (numbered DB migrations, ~2-4 week cadence).
