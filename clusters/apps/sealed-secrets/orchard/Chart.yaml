@@ -15,7 +15,7 @@ appVersion: "0.34.0"
 dependencies:
   - name: sealed-secrets
     repository: https://bitnami.github.io/sealed-secrets
-    version: "2.18.0"
+    version: "2.22.0"
     # WHY: Official Bitnami Sealed Secrets Helm chart
     # Ships sealed-secrets controller v0.34.0 (verified from the running image, 2026-10-10)
     # Stable, well-tested, and widely used in production
