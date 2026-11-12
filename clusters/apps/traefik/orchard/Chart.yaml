@@ -15,7 +15,7 @@ appVersion: "3.2.1"
 dependencies:
   - name: traefik
     repository: https://traefik.github.io/charts
-    version: 39.0.0
+    version: 39.0.9
     # WHY: Official Traefik Helm chart
     # This version includes Traefik v3.2.1 with latest features and security fixes
 
