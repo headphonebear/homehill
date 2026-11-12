@@ -55,7 +55,7 @@ spec:
 
       containers:
         - name: manyfold
-          image: ghcr.io/manyfold3d/manyfold:0.153.0
+          image: ghcr.io/manyfold3d/manyfold:0.154.1
           # WHY pinned to 0.153.0 (2026-10-21, latest stable when built). Tag has
           # NO `v` prefix (semver pattern in their docker.yml workflow) — verified
           # via `docker manifest inspect`, amd64+arm64. Releases are frequent
