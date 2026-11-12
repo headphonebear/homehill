@@ -25,7 +25,7 @@ appVersion: "15.0.9"
 dependencies:
   - name: forgejo
     repository: oci://code.forgejo.org/forgejo-helm
-    version: "17.1.7"
+    version: "17.3.2"
     # WHY: the official chart from the Forgejo project itself, pinned — no
     # chasing :latest. Its values are configured under the `forgejo:` key in
     # values.yaml (subchart values are namespaced by the dependency name).
