@@ -36,6 +36,18 @@ spec:
     inProgress: false
     reusePVC: true
 
+  # ── SHUTDOWN: 30 s smart, then fast ─────────────────────────────────────────
+  smartShutdownTimeout: 30
+  # WHY: on shutdown Postgres first does a SMART shutdown: no NEW connections,
+  # but it waits for every client to hang up. Our apps keep connection pools
+  # open, so with the default (180 s) every DB restart meant ~3 min of "DB gone"
+  # (measured 2026-11-12, CNPG chart bump). After 30 s CNPG switches to a FAST
+  # shutdown: open transactions are rolled back, still a clean shutdown, no
+  # crash recovery. 30 s still lets short jobs (backups, migrations) finish.
+  # stopDelay stays at the default 1800 s, the hard upper bound before SIGKILL.
+  # Read at shutdown time by the instance manager (cached Cluster, refreshed
+  # every reconcile; CNPG v1.30.1 source), so changing it restarts nothing.
+
   storage:
     size: 5Gi
     storageClass: longhorn
