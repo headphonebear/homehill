@@ -16,7 +16,7 @@ appVersion: "1.3.3"
 # Hetzner DNS API lösen kann.
 dependencies:
   - name: cert-manager-webhook-hetzner
-    version: "0.6.3"  # Neueste stabile von Hetzner!
+    version: "0.9.1"  # Neueste stabile von Hetzner!
     repository: https://charts.hetzner.cloud
     alias: webhook
 
