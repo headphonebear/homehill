@@ -22,7 +22,7 @@ appVersion: "1.36.0"
 dependencies:
   - name: vaultwarden
     repository: https://guerzon.github.io/vaultwarden
-    version: "0.43.1"
+    version: "0.46.4"
     # WHY: the well-maintained community chart (Stefan runs the same one at work),
     # pinned — no chasing :latest. Its values are configured under the `vaultwarden:`
     # key in values.yaml (subchart values are namespaced by the dependency name).
