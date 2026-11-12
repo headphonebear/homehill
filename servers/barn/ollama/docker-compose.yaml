@@ -9,7 +9,7 @@ services:
   ollama:
     # WHY: pinned, not :latest — Ollama ships several releases a week; we want to
     # pick the version (and roll back) ourselves. CUDA image, not :rocm (RTX 3060).
-    image: ollama/ollama:0.40.6
+    image: ollama/ollama:0.40.16
     container_name: ollama-barn
     restart: unless-stopped
     ports:
