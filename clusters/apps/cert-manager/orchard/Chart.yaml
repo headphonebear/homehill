@@ -15,7 +15,7 @@ appVersion: "1.21.2"
 dependencies:
   - name: cert-manager
     repository: https://charts.jetstack.io
-    version: "1.21.2"
+    version: "v1.21.3"
     # WHY: Official cert-manager Helm chart
     # WHY 1.21.x: supports K8s 1.33-1.36 (needed before Orchard moves to 1.36).
     # Upstream recommends ONE minor version per upgrade — reached via 1.20.4
