@@ -1,15 +1,15 @@
 // ╔════════════════════════════════════════════════════════════════════════════╗
 // ║ Renovate — "how old is it?" for Homehill                                    ║
 // ║                                                                            ║
-// ║ WHAT: the hosted Mend Renovate app (Community/free, runs ~every 4h) reads   ║
-// ║ this repo, spots every version pin (Chart.yaml deps, image tags in          ║
+// ║ WHAT: the hosted Mend Renovate app (Community/free, runs ~once a day)       ║
+// ║ reads this repo, spots every version pin (Chart.yaml deps, image tags in    ║
 // ║ values.yaml / compose files / plain manifests) and opens a PR per update.   ║
 // ║ Merging the PR IS the upgrade → ArgoCD rolls it out. GitOps all the way.    ║
 // ║                                                                            ║
 // ║ PHILOSOPHY: report, don't auto-update. Nothing here automerges. Majors      ║
 // ║ don't even get a PR until the Bär ticks them in the Dependency Dashboard    ║
-// ║ issue. Small updates arrive once a week, Thursday — reviewed in the         ║
-// ║ evening, so the weekend stays free (or free for playing).                   ║
+// ║ issue. Small-update PRs open Wed/Thu and get reviewed Thursday evening,     ║
+// ║ so the weekend stays free (or free for playing).                            ║
 // ║                                                                            ║
 // ║ Set up 2026-11-05 (onboarding PR #72). JSON5 so we can keep WHY comments.   ║
 // ╚════════════════════════════════════════════════════════════════════════════╝
@@ -19,6 +19,16 @@
 
   // WHY: schedules below are read in local time, not UTC.
   timezone: 'Europe/Berlin',
+
+  // ── 0. No rate limits — the weekly schedule is our throttle ─────────────────
+  // WHY: Renovate's defaults are max 2 new PRs per hour (prHourlyLimit) and
+  // max 10 open at once (prConcurrentLimit). With the free tier running only
+  // ~once a day, that meant ≤2 PRs per run: on the first Thursday
+  // (2026-11-12) 17 small updates queued up and not one PR appeared. We
+  // already throttle by day (rule 2) and by hand (majors need a tick), so
+  // these limits only starve the Thursday review.
+  prHourlyLimit: 0,
+  prConcurrentLimit: 0,
 
   packageRules: [
     // ── 1. Majors only on request ─────────────────────────────────────────────
@@ -32,14 +42,17 @@
       dependencyDashboardApproval: true,
     },
 
-    // ── 2. Everything small: Thursdays ────────────────────────────────────────
-    // WHY: one fixed day per week instead of a constant trickle. Window is
-    // 06–18h because the free tier only runs every ~4h — a narrow window could
-    // be missed entirely. PRs stay ONE PER APP (no group): merge = rollout, and
-    // when something breaks we want to know which merge did it.
+    // ── 2. Everything small: PRs open Wed+Thu, review Thursday evening ────────
+    // WHY: one fixed slot per week instead of a constant trickle. The window is
+    // all of Wednesday and Thursday because the free tier runs only ~once a
+    // day, at no fixed hour (seen in the Mend job list: Sat/Sun/Mon, then
+    // nothing Tue/Wed). The first window, Thu 06–18h, was simply missed. Two
+    // whole days give two chances, and the PRs are waiting by Thursday evening.
+    // PRs stay ONE PER APP (no group): merge = rollout, and when something
+    // breaks we want to know which merge did it.
     {
       matchUpdateTypes: ['minor', 'patch', 'digest', 'pin', 'pinDigest'],
-      schedule: ['* 6-17 * * 4'],
+      schedule: ['* * * * 3,4'],
     },
 
     // ── 2b. Treated like majors, even for "minor" bumps ───────────────────────
@@ -48,7 +61,7 @@
     // Renovate happily proposes 1.11 → 1.13 in one jump — not on our storage.
     // WHY memos: still 0.x, so every minor may break; 0.30 renamed the MCP
     // tools that Claude uses. Must come AFTER rule 2 so it overrides the
-    // Thursday schedule (a ticked box should arrive right away, like majors).
+    // Wed/Thu schedule (a ticked box should arrive right away, like majors).
     {
       matchPackageNames: ['longhorn', 'ghcr.io/usememos/memos'],
       dependencyDashboardApproval: true,
