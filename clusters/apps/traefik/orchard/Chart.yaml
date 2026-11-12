@@ -22,7 +22,7 @@ dependencies:
 
   - name: traefik-crds
     repository: https://traefik.github.io/charts
-    version: 1.14.1
+    version: 1.18.0
     # WHY: Traefik Custom Resource Definitions (IngressRoute, Middleware, etc.)
     # Deployed as their own chart so they upgrade with the umbrella.
     #
