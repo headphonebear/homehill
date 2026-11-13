@@ -20,7 +20,7 @@ appVersion: "1.18.2"
 dependencies:
   - name: qdrant
     repository: https://qdrant.github.io/qdrant-helm
-    version: "1.18.2"
+    version: "1.20.1"
     # WHY: official Qdrant Helm chart, pinned (no chasing :latest). Chart 1.18.2
     # ships appVersion v1.18.2. Its values are configured under the `qdrant:` key
     # in values.yaml (subchart values are namespaced by the dependency name).
