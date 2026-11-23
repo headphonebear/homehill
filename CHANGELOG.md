@@ -13,6 +13,19 @@ and this project uses date-based versioning (YYYY.MM.DD).
 
 ---
 
+## [2026-11-23] "Station to Station" 🛰️
+Two days of fresh-air data from a breadboard on the wall, and the verdict was clear: this stays. Homehill grows a third domain — hardware we build ourselves.
+
+### Added
+- **`devices/`**, the home of **Station to Station**: self-built ESP32 stations that measure the air in the house, no cloud, no hub. One folder per station, named after its place, holding firmware, wiring, carrier PCB and printable enclosure together — the enclosures will be published (MakerWorld/Printables) and link back here
+- **Station Beardesk** (`devices/station-beardesk/`, ex "Station 1"): ESP32 HW-394 + SCD41 (CO₂/temp/humidity) + TSL2591 (light) + OLED + RGB LED + button. An air traffic light that dims with the room and a display that only wakes on a button press. ESPHome config and `PINOUT.md` moved in from the workbench, renamed to `station-beardesk`
+- **`.gitignore`** for ESPHome (`secrets.yaml`, `.esphome/` — the repo is public) and KiCad (autosaves, backups, lock files, per-user `*.kicad_prl`)
+
+### Changed
+- **barn**: KiCad 9.0.8 installed. Its 3D models (4.6 GB) live in the new `/srv/shared/kicad-3d` with a symlink from `/usr/share/kicad/3dmodels` — `/` has only 46 GB. `/srv/shared` is for libraries several accounts read
+
+---
+
 ## [2026-11-07] "A Key to the Studio" 🎧
 `mk3` asked in Hive thread `mk3-katalog` to see what's on the shelf. Now it can — and keep its own lists next to the catalog.
 

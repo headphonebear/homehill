@@ -24,6 +24,8 @@ homehill/
 │   ├── belfry/      #    🔔 music server
 │   ├── chick/       #    🐣 development server
 │   └── dovecote/    #    🕊️ Pi-hole DNS
+├── devices/         # 🛰️ Station to Station — self-built ESP32 sensor stations
+│   └── station-beardesk/  # firmware (ESPHome), wiring, PCB, enclosure
 ├── docs/            # Repo-wide: UID/GID schema for users and services
 ├── CHANGELOG.md     # What changed, and why
 └── CLAUDE.md        # Working conventions for AI-assisted sessions
@@ -73,6 +75,21 @@ when things break: [`clusters/docs/TROUBLESHOOTING.md`](clusters/docs/TROUBLESHO
 | 🔔 **belfry** | Music server (Lyrion Music Server), gapless, tag-respecting | [`servers/belfry/`](servers/belfry/) |
 | 🐣 **chick** | Development server (PostgreSQL, Valkey) | [`servers/chick/`](servers/chick/) |
 | 🕊️ **dovecote** | Pi-hole — DNS for the whole house, independent of the cluster | [`servers/dovecote/`](servers/dovecote/) |
+
+---
+
+## 🛰️ Station to Station — self-built devices
+
+Small ESP32 stations that measure the air in the house — CO₂, temperature,
+humidity, light — with no cloud and no hub. Everything for a station lives in
+one folder: ESPHome firmware, wiring, the KiCad carrier board and the printable
+enclosure. One station per place, one database for all of them.
+
+| Station | Place | Details |
+|---|---|---|
+| 🐻 **Beardesk** | Stefan's desk, home office | [`devices/station-beardesk/`](devices/station-beardesk/) |
+
+Start here: [`devices/README.md`](devices/README.md)
 
 ---
 

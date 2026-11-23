@@ -19,3 +19,16 @@ charts/
 
 # macOS
 .DS_Store
+
+# ESPHome (devices/) — WHY: repo is public; secrets.yaml holds WiFi/API keys,
+# .esphome/ is the local build cache (also root-owned when built via Docker)
+devices/**/secrets.yaml
+devices/**/.esphome/
+
+# KiCad (devices/*/pcb/) — WHY: only the design files are source; these are
+# autosaves, backups, lock files and per-user window state
+*-backups/
+_autosave-*
+~*.lck
+*.kicad_prl
+fp-info-cache

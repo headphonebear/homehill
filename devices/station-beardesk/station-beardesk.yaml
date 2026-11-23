@@ -1,0 +1,204 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  Station Beardesk 🛰️ — Raumklima am Schreibtisch des Bären    ║
+# ║  Projekt „Station to Station“, Knoten Nr. 1 (ex „Station 1“)  ║
+# ║  ESP32-DevKit HW-394 + Sensirion SCD41 (CO₂/Temp/Feuchte)     ║
+# ║  Gebaut 2026-11-21 von Stefan (Hände) + coder (Konfig)        ║
+# ╚══════════════════════════════════════════════════════════════╝
+#
+# WHY ohne WLAN: Erster Test nur über USB/Seriell. Keine Zugangsdaten
+#   nötig, nichts verlässt den Schreibtisch. WLAN + Export zu Orchard
+#   kommen in Schritt 2 (dann mit secrets.yaml, nie im Klartext hier).
+
+esphome:
+  name: station-beardesk
+  friendly_name: "Station Beardesk"
+  # WHY: Nach dem Start zeigt das Display 30 s lang die Werte, dann geht es aus.
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: screen_timeout
+
+esp32:
+  board: esp32dev
+
+# Ausgabe über USB-Seriell (115200 Baud). Hier lesen wir die Werte ab.
+logger:
+  level: DEBUG  # WHY DEBUG: erst hier loggt ESPHome die Messwerte (INFO verschluckt sie)
+
+# I²C-Bus: Standard-Pins des ESP32.
+#   SDA = D21 (grünes Kabel), SCL = D22 (oranges Kabel)
+# WHY scan: Beim Start listet der ESP32 alle gefundenen Adressen.
+#   Der SCD41 sollte als 0x62 auftauchen. Taucht nichts auf → Verkabelung.
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  # WHY 400 kHz: Mit dem Standard (50 kHz) brauchte jedes Display-Update ~220 ms
+  #   und blockierte die Hauptschleife → Tasterdrücke gingen verloren.
+  #   Alle drei Geräte (SCD41, SSD1306, TSL2591) können 400 kHz.
+  frequency: 400kHz
+
+sensor:
+  # Lichtsensor fürs Auto-Dimmen der Luft-Ampel (I²C 0x29, gleicher Bus)
+  - platform: tsl2591
+    address: 0x29
+    update_interval: 5s
+    gain: auto
+    calculated_lux:
+      name: "Helligkeit"
+      id: lux
+      on_value:
+        - logger.log:
+            format: "💡 Licht: %.1f lx"
+            args: [x]
+            level: INFO
+
+  - platform: scd4x
+    co2:
+      name: "CO2"
+      id: co2
+      # WHY on_value: ESPHome 2026.11 zeigt die Messwerte im Log nicht von allein
+      #   an (nur "Warning flag cleared"). So stehen sie garantiert da.
+      on_value:
+        - logger.log:
+            format: "🛰️ CO2: %.0f ppm"
+            args: [x]
+            level: INFO
+    temperature:
+      name: "Temperatur"
+      id: temp
+      on_value:
+        - logger.log:
+            format: "🌡️ Temperatur: %.1f °C"
+            args: [x]
+            level: INFO
+    humidity:
+      name: "Luftfeuchte"
+      id: hum
+      on_value:
+        - logger.log:
+            format: "💧 Luftfeuchte: %.1f %%"
+            args: [x]
+            level: INFO
+    # WHY 10 s: zum Zuschauen beim ersten Test. Später 60 s reicht für Raumklima.
+    update_interval: 10s
+
+# ── Display ──────────────────────────────────────────────────────
+# 0,96″ OLED, 128×64, SSD1306, I²C 0x3C (auf der Platine „0x78“ = 8-Bit-Schreibweise).
+# Hängt am selben Bus wie der SCD41 (0x62) → keine Kollision.
+# WHY gfonts: ESPHome braucht Schriftdateien; Roboto wird beim Kompilieren geholt.
+font:
+  - file: "gfonts://Roboto"
+    id: f_big
+    size: 26
+  - file: "gfonts://Roboto"
+    id: f_small
+    size: 12
+
+display:
+  - platform: ssd1306_i2c
+    id: oled
+    model: "SSD1306 128x64"
+    address: 0x3C
+    update_interval: 2s
+    lambda: |-
+      it.print(0, 0, id(f_small), "Beardesk");
+      if (id(co2).has_state()) {
+        it.printf(0, 14, id(f_big), "%.0f ppm", id(co2).state);
+      } else {
+        it.print(0, 14, id(f_big), "...");
+      }
+      if (id(temp).has_state() && id(hum).has_state()) {
+        it.printf(0, 48, id(f_small), "%.1f C   %.0f %%", id(temp).state, id(hum).state);
+      }
+
+# ── Luft-Ampel: RGB-LED (gemeinsame Kathode, langes Bein an Minus) ──
+# Pins per rgbtest ermittelt (2026-11-21): D27 = Rot, D26 = Grün, D25 = Blau
+# WHY LED statt Display: Ein Licht nimmt man nebenbei wahr, ein Bildschirm
+#   fordert Aufmerksamkeit. Ruhige Technik für ADHS-/Autismus-Köpfe.
+output:
+  - { platform: ledc, pin: GPIO27, id: led_r }
+  - { platform: ledc, pin: GPIO26, id: led_g }
+  - { platform: ledc, pin: GPIO25, id: led_b }
+
+light:
+  - platform: rgb
+    id: air_led
+    name: "Luft-Ampel"
+    red: led_r
+    green: led_g
+    blue: led_b
+    restore_mode: ALWAYS_OFF
+    # WHY 1.0: ESPHome rechnet sonst Gamma 2,8 drauf. Unsere Lux-Kurve ist
+    #   schon an das Auge angepasst; doppelt gerechnet wird alles winzig dunkel
+    #   und die Unterschiede verschwinden.
+    gamma_correct: 1.0
+
+# Farblogik (alle 2 s):
+#   CO₂ ≤ 800 ppm grün → ~1100 gelb → ≥ 1400 rot (fließend)
+#   CO₂ ≥ 1600 ppm: langsames Pulsieren (hell/dunkel im Wechsel)
+#   Luftfeuchte > 65 %: im Wechsel blau dazwischen (Schimmel-Warnung)
+# Helligkeit folgt dem Raumlicht (TSL2591): nachts gedimmt, tags heller.
+interval:
+  - interval: 2s
+    then:
+      - lambda: |-
+          static uint32_t tick = 0;
+          tick++;
+          if (!id(co2).has_state()) return;
+          float c = id(co2).state;
+          float t = (c - 800.0f) / 600.0f;
+          if (t < 0) t = 0;
+          if (t > 1) t = 1;
+          float r = t < 0.5f ? 2.0f * t : 1.0f;
+          float g = t < 0.5f ? 1.0f : 2.0f * (1.0f - t);
+          float b = 0.0f;
+          // WHY log-Skala: Das Auge empfindet Helligkeit logarithmisch.
+          //   ~1 lx (Nacht) → 0,04 · 10 lx → 0,16 · 100 lx → 0,27 · ≥1000 lx → 0,5
+          //   Ohne Lichtwert: feste 0,35 wie bisher.
+          float bright = 0.35f;
+          if (id(lux).has_state() && !std::isnan(id(lux).state)) {
+            float l = id(lux).state;
+            if (l < 1.0f) l = 1.0f;
+            bright = 0.04f + 0.115f * log10f(l);
+            if (bright > 0.5f) bright = 0.5f;
+          }
+          bool humid = id(hum).has_state() && id(hum).state > 65.0f;
+          if (humid && (tick % 2 == 0)) { r = 0; g = 0; b = 1; }
+          if (c >= 1600.0f && (tick % 2 == 1)) bright *= 0.2f;
+          ESP_LOGI("ampel", "🚦 R%.2f G%.2f B%.2f · Helligkeit %.2f", r, g, b, bright);
+          auto call = id(air_led).turn_on();
+          call.set_rgb(r, g, b);
+          call.set_brightness(bright);
+          // WHY 0 (Test 2026-11-21): Mit Überblendung blieb die LED sichtbar
+          //   unverändert, obwohl die Werte stimmten. Erst direkt setzen und prüfen.
+          call.set_transition_length(0);
+          call.perform();
+
+# ── Taster: Display auf Abruf ────────────────────────────────────
+# Gelber Klick-Taster zwischen D33 und Minus (GND). Interner Pull-up,
+# deshalb „inverted“: gedrückt = Verbindung zu GND = an.
+binary_sensor:
+  - platform: gpio
+    name: "Taster"
+    pin:
+      number: GPIO33
+      mode: INPUT_PULLUP
+      inverted: true
+    # WHY kein Interrupt (Test 2026-11-21): Im Interrupt-Modus kamen Tastendrücke
+    #   erst ~5 s später an, gebündelt direkt nach jeder TSL2591-Messung.
+    #   Abfragen in der Schleife (polling) umgeht das.
+    use_interrupt: false
+    filters:
+      - delayed_on: 30ms   # WHY: Prellen des mechanischen Kontakts schlucken
+    on_press:
+      - logger.log: { format: "👆 Taster gedrückt → Display an", level: INFO }
+      - script.execute: screen_timeout
+
+script:
+  - id: screen_timeout
+    mode: restart   # WHY: erneutes Drücken verlängert die 30 s
+    then:
+      - lambda: id(oled).turn_on();
+      - delay: 30s
+      - lambda: id(oled).turn_off();

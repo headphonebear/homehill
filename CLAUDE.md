@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Homehill is a personal homelab **infrastructure-as-code monorepo**. There is no application source code to build or test — it is declarative configuration (Kubernetes manifests, Helm values, Docker Compose) that is applied to running machines. "Correctness" means valid YAML/manifests and adherence to the GitOps conventions below, not passing a test suite.
 
-Two top-level domains, each at a different lifecycle stage:
+Three top-level domains, each at a different lifecycle stage:
 
 - `clusters/` — **the active focus.** A K3s cluster (`orchard`) managed by ArgoCD via GitOps. Most work happens here.
 - `servers/` — Standalone hosts (`mk3` music server, `barn` desktop, `dovecote` Pi-hole/DNS) running Docker Compose stacks. Applied manually per host.
+- `devices/` — **Station to Station**: self-built ESP32 sensor stations, one folder per station named after its place (`station-beardesk`). Holds ESPHome firmware, `PINOUT.md`, KiCad carrier board (`pcb/`) and printable enclosure (`enclosure/`). Flashed by hand from barn. ESPHome `secrets.yaml` and `.esphome/` are gitignored — this repo is public. See `devices/README.md`.
 
 (A legacy Docker Swarm was fully dissolved on 2026-07-16 — its one live service, Pi-hole, moved to `servers/dovecote/`; see CHANGELOG. Its nodes `greenhouse` + `nook` were freed.)
 
@@ -89,4 +90,5 @@ Manifests in this repo carry heavy inline documentation — boxed `# ╔══�
 - `clusters/docs/SECRETS.md` — full SealedSecrets workflow
 - `clusters/docs/TROUBLESHOOTING.md` — battle-tested fixes (Multi-Attach, stuck syncs, webhook TLS, cert issues)
 - `clusters/docs/orchard/` — architecture, bootstrap, post-bootstrap tasks
+- `devices/README.md` — Station to Station: layout, ESPHome-via-Docker flashing, secrets rule
 - `docs/uid-schema.md` — UID/GID schema for personal accounts and service users (used on all hosts + in pod securityContexts)
