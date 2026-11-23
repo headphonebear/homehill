@@ -1,7 +1,13 @@
 # 🛰️ Station Beardesk: Pinbelegung
 
-Stand: **2026-11-21** (so gebaut und getestet). Quelle der Wahrheit für die Software ist
+Stand: **2026-11-23**, Platine v0.2. Quelle der Wahrheit für die Software ist
 `station-beardesk.yaml`. Diese Datei beschreibt die **Verdrahtung**.
+
+> **⚠️ Pins umgezogen (Platine v0.2):** LED Rot/Grün/Blau **D27/D26/D25 → D19/D18/D17**,
+> Taster **D33 → D16**. I²C (D21/D22) bleibt. Grund: Auf der Platine steht der ESP32 auf dem
+> Kopf (USB-C unten, Kabel hängt nach unten), dann zeigt die 3V3-Reihe zum Display.
+> Die Tabellen unten zeigen noch das **Steckbrett vom 2026-11-21** – vor der Bestellung wird
+> es auf die neuen Pins umgesteckt und getestet.
 
 ## Board
 
@@ -86,7 +92,19 @@ Kein externer Widerstand: interner Pull-up (`INPUT_PULLUP`, `inverted: true`).
 ⚠️ Der Taster hat mehr Beine als Kontakte. Er funktioniert nur an den beiden Beinen, die beim
 Drücken verbunden werden (Station 1 lief anfangs nicht, weil die falschen Beine benutzt waren).
 
-## Freie Pins (Stand 2026-11-21)
+## Platine v0.2: ESP32-Pins
+
+| Funktion | Pin | Leiste (USB-C unten) |
+|---|---|---|
+| 3V3 / GND | 3V3 / GND | J1 Pin 1 / 2 (unten rechts) |
+| I²C SDA / SCL | D21 / D22 | J1 Pin 11 / 14 |
+| LED Rot / Grün / Blau | **D19 / D18 / D17** | J1 Pin 10 / 9 / 7 |
+| Taster | **D16** | J1 Pin 6 |
+| GND | GND | J2 Pin 2 |
+
+Nicht benutzt, weil Strapping-Pins (Bootverhalten): D2, D5, D12, D15.
+
+## Freie Pins (Steckbrett, Stand 2026-11-21)
 
 Rechts: D13, D12, D14, D32 (D34/D35/VN/VP sind **nur Eingänge**).
 Links: D15, D2 (Board-LED), D4, D16, D17, D5, D18, D19, D23.

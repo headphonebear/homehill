@@ -113,13 +113,17 @@ display:
       }
 
 # ── Luft-Ampel: RGB-LED (gemeinsame Kathode, langes Bein an Minus) ──
-# Pins per rgbtest ermittelt (2026-11-21): D27 = Rot, D26 = Grün, D25 = Blau
+# v0.2 (Platine): D19 = Rot, D18 = Grün, D17 = Blau  (Steckbrett bis 2026-11-23: D27/D26/D25)
+# WHY umgezogen: Auf der Platine steht der ESP32 auf dem Kopf (USB-C unten). Die rechte
+#   Pinreihe zeigt dann zum Display – LED + Taster gehören auf diese Seite.
+#   D2/D5/D12/D15 bewusst NICHT: Strapping-Pins, die der ESP32 beim Booten ausliest.
+# ⚠️ Vor dem nächsten Flashen das Steckbrett entsprechend umstecken (Test vor der Bestellung).
 # WHY LED statt Display: Ein Licht nimmt man nebenbei wahr, ein Bildschirm
 #   fordert Aufmerksamkeit. Ruhige Technik für ADHS-/Autismus-Köpfe.
 output:
-  - { platform: ledc, pin: GPIO27, id: led_r }
-  - { platform: ledc, pin: GPIO26, id: led_g }
-  - { platform: ledc, pin: GPIO25, id: led_b }
+  - { platform: ledc, pin: GPIO19, id: led_r }
+  - { platform: ledc, pin: GPIO18, id: led_g }
+  - { platform: ledc, pin: GPIO17, id: led_b }
 
 light:
   - platform: rgb
@@ -176,13 +180,13 @@ interval:
           call.perform();
 
 # ── Taster: Display auf Abruf ────────────────────────────────────
-# Gelber Klick-Taster zwischen D33 und Minus (GND). Interner Pull-up,
+# Taster zwischen D16 (v0.2, Steckbrett bis 2026-11-23: D33) und GND. Interner Pull-up,
 # deshalb „inverted“: gedrückt = Verbindung zu GND = an.
 binary_sensor:
   - platform: gpio
     name: "Taster"
     pin:
-      number: GPIO33
+      number: GPIO16
       mode: INPUT_PULLUP
       inverted: true
     # WHY kein Interrupt (Test 2026-11-21): Im Interrupt-Modus kamen Tastendrücke

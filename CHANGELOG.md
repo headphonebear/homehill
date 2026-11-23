@@ -19,6 +19,7 @@ Two days of fresh-air data from a breadboard on the wall, and the verdict was cl
 ### Added
 - **`devices/`**, the home of **Station to Station**: self-built ESP32 stations that measure the air in the house, no cloud, no hub. One folder per station, named after its place, holding firmware, wiring, carrier PCB and printable enclosure together — the enclosures will be published (MakerWorld/Printables) and link back here
 - **Station Beardesk** (`devices/station-beardesk/`, ex "Station 1"): ESP32 HW-394 + SCD41 (CO₂/temp/humidity) + TSL2591 (light) + OLED + RGB LED + button. An air traffic light that dims with the room and a display that only wakes on a button press. ESPHome config and `PINOUT.md` moved in from the workbench, renamed to `station-beardesk`
+- **Carrier PCB v0.2** (`devices/station-beardesk/pcb/`, KiCad 9): 96 × 62 mm, two layers, everything plugs in (ESP32 + three I²C modules on female headers). ESP32 upside down so the USB cable hangs down and the antenna sits free at the top; SCD41 at the bottom, away from the rising ESP32 heat; display, LED and a 13 mm tall 6 × 6 button as one control row. LED/button moved to D19/D18/D17/D16 for that — to be tested on the breadboard before ordering. DRC clean
 - **`.gitignore`** for ESPHome (`secrets.yaml`, `.esphome/` — the repo is public) and KiCad (autosaves, backups, lock files, per-user `*.kicad_prl`)
 
 ### Changed
