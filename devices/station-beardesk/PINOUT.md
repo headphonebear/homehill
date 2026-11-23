@@ -52,6 +52,20 @@ Keine Adresskonflikte.
 
 WHY 400 kHz: Bei 50 kHz blockierte jedes OLED-Update ~220 ms die Hauptschleife.
 
+### Stiftleisten der Module (für die Platine)
+
+Abgelesen vom Aufdruck, Fotos 2026-11-23 (`~/localsend/IMG_20261123_2122*`–`2124*`).
+Pin 1 = links, wenn man den Aufdruck lesen kann.
+
+| Modul | Pins | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| **SCD41** (blaue Platine, Leiste „H1“) | 4 | GND | VCC | SCL | SDA | | |
+| **OLED 0,96″** | 4 | GND | VCC | SCL | SDA | | |
+| **TSL2591** (Adafruit) | 6 | Vin | GND | 3Vo | INT | SDA | SCL |
+
+WHY das wichtig ist: Auf dem Steckbrett geht jedes Kabel einzeln, auf der Platine sitzt
+die Buchsenleiste fest. Eine falsche Reihenfolge heißt: Modul verkehrt herum, VCC auf GND.
+
 ## RGB-LED (Luft-Ampel)
 
 5 mm, diffus, **gemeinsame Kathode**: **langes Bein → Minus-Schiene**.
