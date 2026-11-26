@@ -14,10 +14,6 @@ name: memos-orchard
 description: Memos self-hosted notes at Homehill, backed by CloudNativePG
 type: application
 version: 1.0.0
-appVersion: "TBD"
-# WHY: appVersion (the memos image tag) is pinned in step 3 when the Deployment
-# is added. The Swarm ran `ghcr.io/usememos/memos:latest` — we deliberately pin
-# a concrete tag on Orchard instead of chasing :latest.
 
 # WHY no dependencies: memos ships only a container image, not a Helm chart.
 # This is a pure "local manifests" umbrella, so there is no Chart.lock to commit.

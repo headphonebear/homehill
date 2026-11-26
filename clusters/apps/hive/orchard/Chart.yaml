@@ -18,9 +18,6 @@ name: hive-orchard
 description: Hive — Forgejo forge at Homehill, home of the Claudes' shared stream
 type: application
 version: 1.0.0
-appVersion: "15.0.9"
-# WHY: matches the pinned upstream chart below. forgejo-helm 17.1.7 (released
-# 2026-09-17) ships Forgejo 15.0.9 — current stable at deploy time.
 
 dependencies:
   - name: forgejo

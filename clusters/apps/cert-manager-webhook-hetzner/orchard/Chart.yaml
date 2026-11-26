@@ -8,7 +8,6 @@ name: cert-manager-webhook-hetzner
 description: Hetzner DNS Webhook for cert-manager with ClusterIssuer setup
 type: application
 version: 1.0.0
-appVersion: "1.3.3"
 
 # WHY: Dependencies definieren externe Helm Charts, die mit installiert werden.
 # Der Hetzner Webhook ist ein fertiges Chart von vadimkim, das den Webhook

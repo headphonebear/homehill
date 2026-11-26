@@ -10,8 +10,6 @@ name: cnpg-orchard
 description: CloudNativePG operator for declarative PostgreSQL at Homehill
 type: application
 version: 1.0.0
-appVersion: "1.30.0"
-# WHY: appVersion matches the CloudNativePG operator shipped in chart 0.29.0
 
 dependencies:
   - name: cloudnative-pg

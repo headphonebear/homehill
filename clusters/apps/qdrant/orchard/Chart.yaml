@@ -13,14 +13,13 @@ name: qdrant-orchard
 description: Qdrant vector store at Homehill — memory-system prod instance
 type: application
 version: 1.0.0
-appVersion: "1.18.2"
-# WHY: matches the pinned upstream chart/app below — and the same v1.18.2 the
-# barn dev/bastel instance runs. Same version in both places, on purpose.
 
 dependencies:
   - name: qdrant
     repository: https://qdrant.github.io/qdrant-helm
     version: "1.18.2"
-    # WHY: official Qdrant Helm chart, pinned (no chasing :latest). Chart 1.18.2
-    # ships appVersion v1.18.2. Its values are configured under the `qdrant:` key
-    # in values.yaml (subchart values are namespaced by the dependency name).
+    # WHY: official Qdrant Helm chart, pinned (no chasing :latest). Its values
+    # are configured under the `qdrant:` key in values.yaml (subchart values are
+    # namespaced by the dependency name).
+    # WHY same version as barn: the barn dev/bastel instance runs the same Qdrant
+    # release on purpose — bump both together (see servers/barn/qdrant/).

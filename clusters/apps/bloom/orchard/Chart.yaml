@@ -23,7 +23,5 @@ name: bloom-proxy-orchard
 description: HTTPS front door for SwarmUI (Stable Diffusion) on barn (Traefik reverse proxy)
 type: application
 version: 1.0.0
-appVersion: "native"
-# WHY appVersion "native": SwarmUI is not a container — it runs self-contained
-# from /srv/ai/SwarmUI on barn via systemd. Informational only; nothing here
-# deploys SwarmUI itself (unit + launcher → servers/barn/bloom/, coming from `ai`).
+# SwarmUI itself is not deployed from here: its unit + launcher live in
+# servers/barn/bloom/ (owned by `ai`), the install in /srv/ai/SwarmUI on barn.

@@ -9,8 +9,6 @@ name: longhorn-orchard
 description: Longhorn distributed block storage for Orchard cluster at Homehill
 type: application
 version: 1.0.1
-appVersion: "1.11.3"
-# WHY: appVersion matches Longhorn's actual version (v1.11.3, patch release)
 
 dependencies:
   - name: longhorn

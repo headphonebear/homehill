@@ -24,8 +24,8 @@ qdrant:
 
   image:
     tag: "v1.18.2"
-    # WHY: pin explicitly for parity with barn, even though the chart's default
-    # tag already resolves to appVersion v1.18.2.
+    # WHY: pin explicitly for parity with barn (see Chart.yaml) instead of
+    # following whatever the chart's default tag happens to be.
 
   persistence:
     accessModes: ["ReadWriteOnce"]
