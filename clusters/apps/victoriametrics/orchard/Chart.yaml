@@ -9,8 +9,6 @@ name: victoriametrics-orchard
 description: VictoriaMetrics time-series database for long-term metrics storage
 type: application
 version: 1.0.0
-appVersion: "1.107.0"
-# WHY: appVersion matches VictoriaMetrics version in victoria-metrics-single chart
 
 dependencies:
   - name: victoria-metrics-single

@@ -20,7 +20,3 @@ name: music-proxy-orchard
 description: HTTPS front door for the standalone Lyrion Music Server on belfry (Traefik reverse proxy)
 type: application
 version: 1.0.0
-appVersion: "stable"
-# WHY appVersion "stable": tracks the LMS docker tag running on belfry
-# (lmscommunity/lyrionmusicserver:stable). Informational only — nothing here
-# deploys LMS itself; that stack lives in servers/belfry/docker-compose.yml.

@@ -3,7 +3,6 @@ name: argocd-orchard
 description: Bootstrap chart to configure ArgoCD for the Orchard cluster at Homehill
 type: application
 version: 1.0.0
-appVersion: "3.4.6"
 dependencies:
   - name: argo-cd
     version: "10.2.2"

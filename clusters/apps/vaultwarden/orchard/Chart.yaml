@@ -15,9 +15,6 @@ name: vaultwarden-orchard
 description: Vaultwarden password manager at Homehill — the secrets source-of-truth
 type: application
 version: 1.0.0
-appVersion: "1.36.0"
-# WHY: matches the pinned upstream chart/app below. guerzon chart 0.43.1 ships
-# Vaultwarden 1.36.0 (current stable as of the deploy, July 2026).
 
 dependencies:
   - name: vaultwarden

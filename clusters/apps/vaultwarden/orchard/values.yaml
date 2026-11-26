@@ -42,8 +42,8 @@ vaultwarden:
 
   image:
     tag: "1.36.0-alpine"
-    # WHY: pin explicitly (chart default already resolves here) — no chasing
-    # :latest, matches appVersion in Chart.yaml.
+    # WHY: pin explicitly — no chasing :latest, and the running version is
+    # readable right here instead of hidden behind the chart's default tag.
 
   domain: "https://vault.homehill.de"
   # WHY: Vaultwarden MUST know its public URL or WebAuthn/attachments/2FA break.

@@ -1,7 +1,7 @@
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ Traefik Umbrella Chart for Orchard                                         ║
 # ║ Single Traefik instance with CRDs for IngressRoute/Middleware support      ║
-# ║ PATTERN: Umbrella chart wrapping official Traefik chart v39.0.9            ║
+# ║ PATTERN: Umbrella chart wrapping the official Traefik chart                ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 apiVersion: v2
@@ -9,10 +9,6 @@ name: traefik-orchard
 description: Traefik Ingress Controller for Orchard cluster at Homehill
 type: application
 version: 1.0.0
-appVersion: "3.6.15"
-# WHY: appVersion matches Traefik's actual version (v3.6.15 in chart 39.0.9).
-# Check after every chart bump: `helm template` → grep the traefik image tag.
-# (Until 2026-11-12 this still said 3.2.1 although chart 39.0.0 shipped 3.6.7.)
 
 dependencies:
   - name: traefik
