@@ -69,19 +69,25 @@ victoria-metrics-single:
       # - Grafana queries it
       # No need to expose externally
 
-  # ╔──────────────────────────────────────────────────────────────────────────╗
-  # ║ ServiceMonitor (for self-monitoring)                                    ║
-  # ╚──────────────────────────────────────────────────────────────────────────╝
+    # ╔────────────────────────────────────────────────────────────────────────╗
+    # ║ ServiceMonitor (for self-monitoring)                                   ║
+    # ╚────────────────────────────────────────────────────────────────────────╝
 
-  serviceMonitor:
-    enabled: true
-    # WHY: VictoriaMetrics should monitor itself
-    # Prometheus scrapes VictoriaMetrics metrics:
-    # - Ingestion rate (samples/s)
-    # - Storage size
-    # - Query performance
-    # - Memory usage
-    # These get stored in VictoriaMetrics itself (circular, but useful!)
+    serviceMonitor:
+      enabled: true
+      # WHY: VictoriaMetrics should monitor itself
+      # Prometheus scrapes VictoriaMetrics metrics:
+      # - Ingestion rate (samples/s)
+      # - Storage size
+      # - Query performance
+      # - Memory usage
+      # These get stored in VictoriaMetrics itself (circular, but useful!)
+      #
+      # WHY under `server:`: the chart only reads `server.serviceMonitor`. Until
+      # 2026-11-26 this block sat one level up, was silently ignored, and no
+      # ServiceMonitor was ever rendered — VM went unmonitored since day one.
+      # No extra labels needed: our Prometheus has an empty (= match all)
+      # serviceMonitorSelector.
 
   # ╔──────────────────────────────────────────────────────────────────────────╗
   # ║ Scrape Configuration (optional - we use Prometheus for scraping)        ║
